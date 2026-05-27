@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tealux Cafe Tampa | Boba, Milk Tea & Desserts</title>
+  <meta name="description" content="Tealux Cafe Tampa — handcrafted boba, milk tea, and desserts at 4311 W Waters Ave, Tampa FL. Open daily 11AM–9PM." />
+  <meta name="theme-color" content="#111111" />
+  <style>
+    :root {
+      --crimson:  #D4B700;
+      --crimson2: #B89E00;
+      --black:    #111111;
+      --white:    #FFFFFF;
+      --cream:    #F7F2EC;
+      --gold:     #D4B700;
+    }
+
+    /* ── ADA / ACCESSIBILITY ── */
+    .skip-link {
+      position: absolute;
+      top: -100px;
+      left: 0;
+      background: var(--gold);
+      color: var(--black);
+      padding: 12px 20px;
+      font-weight: 900;
+      font-size: 0.9rem;
+      z-index: 9999;
+      text-decoration: none;
+      border-radius: 0 0 6px 0;
+    }
+    .skip-link:focus { top: 0; }
+
+    *:focus-visible {
+      outline: 3px solid var(--gold);
+      outline-offset: 3px;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Arial Black', 'Arial', sans-serif;
+      background: var(--cream);
+      color: var(--black);
+    }
+
+    /* ── NAV ── */
+    nav {
+      background: var(--black);
+      padding: 18px 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .logo {
+      text-decoration: none;
+      color: var(--white);
+      line-height: 1;
+    }
+    .logo-main {
+      font-size: 1.5rem;
+      font-weight: 900;
+      letter-spacing: -0.5px;
+      display: block;
+    }
+    .logo-sub {
+      font-size: 0.5rem;
+      letter-spacing: 5px;
+      font-weight: 700;
+      opacity: 0.6;
+      display: block;
+      margin-top: 3px;
+    }
+
+    nav ul {
+      list-style: none;
+      display: flex;
+      gap: 32px;
+    }
+    nav ul a {
+      text-decoration: none;
+      color: var(--white);
+      font-weight: 700;
+      font-size: 0.85rem;
+      letter-spacing: 0.5px;
+      opacity: 0.8;
+    }
+    nav ul a:hover { opacity: 1; }
+
+    /* ── HERO ── */
+    .hero {
+      background: radial-gradient(ellipse at center, #E0C400 0%, #B89E00 100%);
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      align-items: center;
+      min-height: 520px;
+      padding: 60px 72px;
+      gap: 40px;
+    }
+    .hero-text h1 {
+      font-size: 4rem;
+      font-weight: 900;
+      color: var(--black);
+      line-height: 1.05;
+      letter-spacing: -1.5px;
+      margin-bottom: 20px;
+    }
+    .hero-text p {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: rgba(0,0,0,0.6);
+      line-height: 1.7;
+      margin-bottom: 36px;
+    }
+    .hero-img {
+      display: flex;
+      justify-content: center;
+      align-items: flex-end;
+    }
+    .hero-img img {
+      width: 100%;
+      max-width: 320px;
+      filter: drop-shadow(0 20px 40px rgba(0,0,0,0.5));
+    }
+
+    /* ── BUTTONS ── */
+    .btn {
+      display: inline-block;
+      padding: 14px 32px;
+      border-radius: 50px;
+      font-family: 'Arial Black', Arial, sans-serif;
+      font-weight: 900;
+      font-size: 0.9rem;
+      text-decoration: none;
+      transition: all 0.15s;
+      cursor: pointer;
+    }
+    .btn-white {
+      background: var(--white);
+      color: var(--black);
+      border: 3px solid var(--white);
+    }
+    .btn-white:hover {
+      background: transparent;
+      color: var(--white);
+    }
+    .btn-outline-dark {
+      background: transparent;
+      color: var(--black);
+      border: 3px solid var(--black);
+    }
+    .btn-outline-dark:hover {
+      background: var(--black);
+      color: var(--white);
+    }
+    .btn-dark {
+      background: var(--black);
+      color: var(--white);
+      border: 3px solid var(--black);
+    }
+    .btn-dark:hover {
+      background: transparent;
+      color: var(--black);
+    }
+    .btn-crimson {
+      background: var(--crimson);
+      color: var(--white);
+      border: 3px solid var(--crimson);
+    }
+    .btn-crimson:hover {
+      background: transparent;
+      color: var(--crimson);
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    /* ── DIVIDER ── */
+    hr { border: none; border-top: 2px solid rgba(0,0,0,0.08); }
+
+    /* ── SECTIONS ── */
+    section {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 72px 48px;
+    }
+    section h2 {
+      font-size: 2rem;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: -0.5px;
+      margin-bottom: 24px;
+    }
+
+    /* ── ABOUT ── */
+    .about-text {
+      font-size: 1.1rem;
+      font-weight: 600;
+      line-height: 1.85;
+      max-width: 660px;
+      color: #333;
+    }
+
+    /* ── INFO CARDS ── */
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    .info-card {
+      background: var(--black);
+      color: var(--white);
+      padding: 36px;
+      border-radius: 8px;
+    }
+    .info-card h3 {
+      font-size: 0.7rem;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+      opacity: 0.5;
+    }
+    .info-card p, .info-card a {
+      font-size: 1.05rem;
+      font-weight: 700;
+      line-height: 2;
+      color: var(--white);
+      text-decoration: none;
+    }
+    .info-card a:hover { text-decoration: underline; }
+
+    /* ── ORDER STRIP ── */
+    .order-strip {
+      background: var(--crimson);
+      padding: 64px 48px;
+    }
+    .order-inner {
+      max-width: 1000px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 32px;
+      flex-wrap: wrap;
+    }
+    .order-inner h2 {
+      font-size: 2rem;
+      font-weight: 900;
+      color: var(--white);
+      text-transform: uppercase;
+    }
+    .order-inner p {
+      font-size: 1rem;
+      color: rgba(255,255,255,0.7);
+      margin-top: 8px;
+      font-weight: 600;
+    }
+
+    /* ── CONTACT ── */
+    .contact-detail {
+      font-size: 1.05rem;
+      font-weight: 700;
+      line-height: 2.4;
+      margin-top: 28px;
+    }
+    .contact-detail a {
+      color: var(--black);
+      text-decoration: none;
+    }
+    .contact-detail a:hover { text-decoration: underline; }
+
+    /* ── FOOTER ── */
+    footer {
+      background: var(--black);
+      color: var(--white);
+      padding: 56px 48px 40px;
+    }
+    .footer-inner {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    .footer-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr;
+      gap: 48px;
+      margin-bottom: 48px;
+    }
+    .footer-logo-main {
+      font-size: 1.5rem;
+      font-weight: 900;
+      color: var(--white);
+      letter-spacing: -0.5px;
+      line-height: 1;
+    }
+    .footer-logo-sub {
+      font-size: 0.5rem;
+      letter-spacing: 5px;
+      font-weight: 700;
+      opacity: 0.5;
+      display: block;
+      margin-top: 3px;
+    }
+    .footer-addr {
+      font-size: 0.9rem;
+      font-weight: 600;
+      line-height: 2;
+      margin-top: 20px;
+      opacity: 0.65;
+    }
+    .footer-addr a { color: var(--white); }
+    .footer-col h4 {
+      font-size: 0.65rem;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      opacity: 0.4;
+      margin-bottom: 16px;
+    }
+    .footer-col a {
+      display: block;
+      color: var(--white);
+      text-decoration: none;
+      font-size: 0.95rem;
+      font-weight: 700;
+      line-height: 2.2;
+      opacity: 0.8;
+    }
+    .footer-col a:hover { opacity: 1; }
+
+    .sms-policy {
+      border-top: 1px solid rgba(255,255,255,0.1);
+      padding-top: 32px;
+    }
+    .sms-policy h4 {
+      font-size: 0.65rem;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      opacity: 0.4;
+      margin-bottom: 14px;
+    }
+    .sms-policy p {
+      font-size: 0.82rem;
+      font-weight: 500;
+      line-height: 1.8;
+      opacity: 0.5;
+      max-width: 780px;
+    }
+    .sms-policy a { color: var(--white); }
+    .footer-copy {
+      margin-top: 32px;
+      font-size: 0.75rem;
+      opacity: 0.3;
+      font-weight: 600;
+    }
+
+    /* ── MENU ── */
+    .menu-wrap {
+      background: var(--black);
+      padding: 80px 48px;
+    }
+    .menu-inner {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    .menu-inner > h2 {
+      font-size: 2rem;
+      font-weight: 900;
+      text-transform: uppercase;
+      color: var(--white);
+      margin-bottom: 48px;
+    }
+    .menu-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+    }
+    .menu-card {
+      background: #1e1e1e;
+      border-radius: 8px;
+      padding: 28px 28px 32px;
+    }
+    .menu-card h3 {
+      font-size: 0.65rem;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 20px;
+    }
+    .menu-item {
+      padding: 7px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .menu-item:last-child { border-bottom: none; }
+    .menu-item-name {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--white);
+      line-height: 1.4;
+    }
+    .menu-item-new {
+      font-size: 0.6rem;
+      font-weight: 900;
+      color: var(--gold);
+      letter-spacing: 1px;
+      margin-left: 4px;
+      vertical-align: middle;
+    }
+    .menu-note {
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: rgba(255,255,255,0.35);
+      margin-top: 16px;
+      line-height: 1.6;
+    }
+    .menu-card-wide {
+      grid-column: span 2;
+    }
+    .menu-item-cols {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0 24px;
+    }
+    /* ── HAMBURGER BUTTON ── */
+    .nav-toggle {
+      display: none;
+      flex-direction: column;
+      gap: 5px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 8px;
+      min-width: 44px;
+      min-height: 44px;
+      align-items: center;
+      justify-content: center;
+    }
+    .nav-toggle span {
+      display: block;
+      width: 24px;
+      height: 2px;
+      background: var(--white);
+      transition: all 0.2s;
+    }
+    .nav-toggle.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+    .nav-toggle.open span:nth-child(2) { opacity: 0; }
+    .nav-toggle.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+    /* ── MOBILE NAV DRAWER ── */
+    .mobile-nav {
+      display: none;
+      background: var(--black);
+      padding: 0 24px 24px;
+    }
+    .mobile-nav.open { display: block; }
+    .mobile-nav a {
+      display: block;
+      color: var(--white);
+      text-decoration: none;
+      font-family: 'Arial Black', Arial, sans-serif;
+      font-weight: 900;
+      font-size: 1.1rem;
+      padding: 14px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    .mobile-nav a:last-child { border-bottom: none; }
+
+    /* ── TOUCH TARGET SIZING (ADA — min 44×44px) ── */
+    .btn { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
+
+    /* ── TABLET (768px) ── */
+    @media (max-width: 768px) {
+      /* Nav */
+      nav { padding: 16px 24px; }
+      nav ul { display: none; }
+      .nav-toggle { display: flex; }
+
+      /* Hero */
+      .hero {
+        grid-template-columns: 1fr;
+        padding: 48px 24px 0;
+        text-align: center;
+        min-height: auto;
+      }
+      .hero-text h1 { font-size: 2.8rem; }
+      .hero-img img { max-width: 240px; margin: 0 auto; }
+      .hero .btn-row { justify-content: center; }
+
+      /* Sections */
+      section { padding: 48px 24px; }
+      .info-grid { grid-template-columns: 1fr; }
+
+      /* Menu */
+      .menu-wrap { padding: 48px 24px; }
+      .menu-grid { grid-template-columns: 1fr; }
+      .menu-card-wide { grid-column: span 1; }
+      .menu-item-cols { grid-template-columns: 1fr; }
+
+      /* Order strip */
+      .order-strip { padding: 48px 24px; }
+      .order-inner { flex-direction: column; text-align: center; }
+      .order-inner .btn-row { justify-content: center; }
+
+      /* Footer */
+      .footer-grid { grid-template-columns: 1fr; gap: 32px; }
+      footer { padding: 40px 24px 32px; }
+    }
+
+    /* ── SMALL PHONES (400px) ── */
+    @media (max-width: 400px) {
+      .hero-text h1 { font-size: 2.2rem; }
+      .hero-text p { font-size: 1rem; }
+      .btn { padding: 14px 22px; font-size: 0.85rem; }
+      section h2 { font-size: 1.6rem; }
+      .menu-inner > h2 { font-size: 1.6rem; }
+      .order-inner h2 { font-size: 1.6rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- SKIP LINK (ADA) -->
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+
+  <!-- NAV -->
+  <nav role="navigation" aria-label="Main navigation">
+    <a href="#" class="logo">
+      <span class="logo-main">TEALUX CAFE</span>
+      <span class="logo-sub">TAMPA</span>
+    </a>
+    <ul>
+      <li><a href="#about">About</a></li>
+      <li><a href="#menu">Menu</a></li>
+      <li><a href="#location">Location</a></li>
+      <li><a href="#order">Order</a></li>
+      <li><a href="#contact">Contact</a></li>
+    </ul>
+    <button class="nav-toggle" aria-label="Toggle navigation menu" aria-expanded="false" aria-controls="mobile-nav">
+      <span></span><span></span><span></span>
+    </button>
+  </nav>
+  <div class="mobile-nav" id="mobile-nav" role="navigation" aria-label="Mobile navigation">
+    <a href="#about" class="mobile-nav-link">About</a>
+    <a href="#menu" class="mobile-nav-link">Menu</a>
+    <a href="#location" class="mobile-nav-link">Location</a>
+    <a href="#order" class="mobile-nav-link">Order</a>
+    <a href="#contact" class="mobile-nav-link">Contact</a>
+  </div>
+
+  <!-- HERO -->
+  <main id="main-content">
+  <div class="hero" role="banner">
+    <div class="hero-text">
+      <h1>BOBA.<br>TEA.<br>DESSERTS.</h1>
+      <p>
+        Tampa's spot for handcrafted boba<br>
+        and milk teas. Come as you are.
+      </p>
+      <div class="btn-row">
+        <a href="#order" class="btn btn-dark">Order Delivery</a>
+        <a href="#location" class="btn btn-outline-dark">Find Us</a>
+      </div>
+    </div>
+    <div class="hero-img">
+      <img src="tealux-guy.png" alt="Tealux Cafe mascot" />
+    </div>
+  </div>
+
+  <!-- ABOUT -->
+  <section id="about">
+    <h2>Welcome to Tealux Cafe Tampa</h2>
+    <p class="about-text">
+      Tealux Cafe Tampa is your go-to spot for handcrafted boba, milk teas, and desserts in Tampa, FL.
+      Every drink is made with care — from rich brown sugar milk teas to fresh fruit blends.
+      Stop in, stay a while, and sip something good. We're open every day.
+    </p>
+  </section>
+
+  <hr />
+
+  <!-- HOURS & LOCATION -->
+  <section id="location">
+    <h2>Hours &amp; Location</h2>
+    <div class="info-grid">
+      <div class="info-card">
+        <h3>Find Us</h3>
+        <p>
+          4311 W Waters Ave, Suite #501<br>
+          Tampa, FL 33614<br><br>
+          <a href="https://maps.google.com/?q=4311+W+Waters+Ave+Suite+501+Tampa+FL+33614" target="_blank">Get Directions →</a>
+        </p>
+      </div>
+      <div class="info-card">
+        <h3>Open Daily</h3>
+        <p>
+          Monday – Sunday<br>
+          11:00 AM – 9:00 PM
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- MENU -->
+  <div class="menu-wrap" id="menu">
+    <div class="menu-inner">
+      <h2>What We Offer</h2>
+      <div class="menu-grid">
+
+        <!-- DRINKS -->
+        <div class="menu-card">
+          <h3>Milk Tea</h3>
+          <div class="menu-item"><span class="menu-item-name">Tealux Signature Milk Tea</span></div>
+          <div class="menu-item"><span class="menu-item-name">Brown Sugar Fresh Milk</span></div>
+          <div class="menu-item"><span class="menu-item-name">Thai Tea</span></div>
+          <div class="menu-item"><span class="menu-item-name">Taro Milk Tea</span></div>
+          <div class="menu-item"><span class="menu-item-name">Matcha Milk Tea</span></div>
+          <div class="menu-item"><span class="menu-item-name">Ube Latte</span></div>
+          <div class="menu-item"><span class="menu-item-name">Purple Cream Brulee</span></div>
+          <p class="menu-note">+ many more</p>
+        </div>
+
+        <div class="menu-card">
+          <h3>Fruit Teas</h3>
+          <div class="menu-item"><span class="menu-item-name">Islander — Passionfruit, Mango &amp; Pineapple</span></div>
+          <div class="menu-item"><span class="menu-item-name">Heart on Fire — Strawberry &amp; Dragonfruit</span></div>
+          <div class="menu-item"><span class="menu-item-name">Luna — Lychee &amp; Butterfly Pea Tea</span></div>
+          <div class="menu-item"><span class="menu-item-name">Lime Mojito — Lime &amp; Mint</span></div>
+          <div class="menu-item"><span class="menu-item-name">Heart on Ice</span></div>
+          <div class="menu-item"><span class="menu-item-name">Wintermelon</span></div>
+          <p class="menu-note">+ many more seasonal flavors</p>
+        </div>
+
+        <div class="menu-card">
+          <h3>Vietnamese Iced Coffee</h3>
+          <div class="menu-item"><span class="menu-item-name">Light &amp; Dark Blend</span></div>
+          <div class="menu-item"><span class="menu-item-name">Ocean Coffee</span></div>
+          <div class="menu-item"><span class="menu-item-name">Silky Coffee Cream</span></div>
+          <div class="menu-item"><span class="menu-item-name">Egg Silky Cream</span></div>
+          <div class="menu-item"><span class="menu-item-name">Salted Coffee</span></div>
+          <h3 style="margin-top:24px;">Smoothies</h3>
+          <div class="menu-item"><span class="menu-item-name">Taro · Matcha · Coconut · Mango · Strawberry</span></div>
+          <div class="menu-item"><span class="menu-item-name">Lushavo</span></div>
+        </div>
+
+        <!-- FOOD -->
+        <div class="menu-card">
+          <h3>Street Food</h3>
+          <div class="menu-item"><span class="menu-item-name">Rice Paper Salad</span></div>
+          <div class="menu-item"><span class="menu-item-name">Popcorn Chicken</span></div>
+          <div class="menu-item"><span class="menu-item-name">Vietnamese Shrimp Eggroll</span></div>
+          <div class="menu-item"><span class="menu-item-name">Fried Gyoza</span></div>
+          <h3 style="margin-top:24px;">Self Serve Ramen</h3>
+          <div class="menu-item"><span class="menu-item-name">Build your own bowl</span></div>
+          <p class="menu-note">Choose your toppings: Egg, Rice Cake, Kimchi, Dumpling, Spam &amp; more</p>
+        </div>
+
+        <!-- DESSERTS -->
+        <div class="menu-card menu-card-wide">
+          <h3>Desserts &amp; Bakery</h3>
+          <div class="menu-item-cols">
+            <div class="menu-item"><span class="menu-item-name">Matcha Mille Crepe</span></div>
+            <div class="menu-item"><span class="menu-item-name">Ube Cake</span></div>
+            <div class="menu-item"><span class="menu-item-name">Dubai Chocolate Cake</span></div>
+            <div class="menu-item"><span class="menu-item-name">Earl Gray Cake</span></div>
+            <div class="menu-item"><span class="menu-item-name">Creme Brulee</span></div>
+            <div class="menu-item"><span class="menu-item-name">Korean Cheese Coin</span></div>
+            <div class="menu-item"><span class="menu-item-name">Croissant &amp; Croissant Sandwich</span></div>
+            <div class="menu-item"><span class="menu-item-name">NY Style Bagels</span></div>
+          </div>
+          <p class="menu-note" style="margin-top:20px;">Rotating cake selection available in store · Add toppings to any drink — Popping Boba, Tapioca Pearls, Jellies, Cheese Foam &amp; more</p>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ORDER STRIP -->
+  <div class="order-strip" id="order">
+    <div class="order-inner">
+      <div>
+        <h2 style="color:var(--black);">Order Delivery</h2>
+        <p style="color:rgba(0,0,0,0.6);">Get Tealux delivered straight to your door.</p>
+      </div>
+      <div class="btn-row">
+        <a href="https://www.doordash.com/store/tea-lux-tampa-24290466/" target="_blank" class="btn btn-dark">DoorDash</a>
+        <a href="https://www.ubereats.com/store/tealux-cafe4311-west-waters-avenue/DGooevAiWsmBIh7hAAaFsQ" target="_blank" class="btn btn-outline-dark">Uber Eats</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONTACT & SOCIAL -->
+  <section id="contact">
+    <h2>Stay Connected</h2>
+    <p style="font-size:1rem; font-weight:600; color:#444;">Follow us for new drinks, specials, and more:</p>
+    <div class="btn-row" style="margin-top:24px;">
+      <a href="https://www.instagram.com/tealuxcafe.tampa/" target="_blank" class="btn btn-dark">Instagram</a>
+      <a href="https://www.facebook.com/tealuxcafetampa/" target="_blank" class="btn btn-outline-dark">Facebook</a>
+    </div>
+    <div class="contact-detail">
+      <a href="tel:+18134022196">(813) 402-2196</a><br>
+      <a href="mailto:tealuxcafetampaxr@gmail.com">tealuxcafetampaxr@gmail.com</a>
+    </div>
+  </section>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer role="contentinfo">
+    <div class="footer-inner">
+      <div class="footer-grid">
+        <div>
+          <div class="footer-logo-main">TEALUX CAFE<span class="footer-logo-sub">TAMPA</span></div>
+          <p class="footer-addr">
+            4311 W Waters Ave, Suite #501<br>
+            Tampa, FL 33614<br>
+            Open Daily · 11AM – 9PM<br><br>
+            <a href="tel:+18134022196">(813) 402-2196</a><br>
+            <a href="mailto:tealuxcafetampaxr@gmail.com">tealuxcafetampaxr@gmail.com</a>
+          </p>
+        </div>
+        <div class="footer-col">
+          <h4>Follow</h4>
+          <a href="https://www.instagram.com/tealuxcafe.tampa/" target="_blank">Instagram</a>
+          <a href="https://www.facebook.com/tealuxcafetampa/" target="_blank">Facebook</a>
+        </div>
+        <div class="footer-col">
+          <h4>Order</h4>
+          <a href="https://www.doordash.com/store/tea-lux-tampa-24290466/" target="_blank">DoorDash</a>
+          <a href="https://www.ubereats.com/store/tealux-cafe4311-west-waters-avenue/DGooevAiWsmBIh7hAAaFsQ" target="_blank">Uber Eats</a>
+        </div>
+      </div>
+
+      <div class="sms-policy">
+        <h4>SMS &amp; Text Message Policy</h4>
+        <p>
+          Tealux Cafe Tampa may send SMS messages to customers who have opted in to receive communications.
+          Message frequency varies. Message and data rates may apply. Reply STOP to opt out at any time.
+          Reply HELP for assistance or contact us at
+          <a href="mailto:tealuxcafetampaxr@gmail.com">tealuxcafetampaxr@gmail.com</a>.
+          We do not sell or share your phone number with third parties.
+        </p>
+      </div>
+
+      <p class="footer-copy">
+        © 2026 Tealux Cafe Tampa. All rights reserved. &nbsp;·&nbsp;
+        <a href="privacy.html" style="color:inherit; text-decoration:underline;">Privacy Policy</a> &nbsp;·&nbsp;
+        <a href="terms.html" style="color:inherit; text-decoration:underline;">Terms of Service</a> &nbsp;·&nbsp;
+        <a href="accessibility.html" style="color:inherit; text-decoration:underline;">Accessibility</a>
+      </p>
+    </div>
+  </footer>
+
+  <script>
+    const toggle = document.querySelector('.nav-toggle');
+    const mobileNav = document.getElementById('mobile-nav');
+    toggle.addEventListener('click', () => {
+      const open = mobileNav.classList.toggle('open');
+      toggle.classList.toggle('open', open);
+      toggle.setAttribute('aria-expanded', open);
+    });
+    // Close menu when a link is tapped
+    document.querySelectorAll('.mobile-nav-link').forEach(link => {
+      link.addEventListener('click', () => {
+        mobileNav.classList.remove('open');
+        toggle.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+      });
+    });
+  </script>
+</body>
+</html>
