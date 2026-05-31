@@ -277,6 +277,90 @@
     }
     .contact-detail a:hover { text-decoration: underline; }
 
+    /* ── CONTACT FORM ── */
+    .contact-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 48px;
+      margin-top: 32px;
+      align-items: start;
+    }
+    .contact-form {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .contact-form label {
+      font-size: 0.65rem;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      font-weight: 900;
+      color: #555;
+      display: block;
+      margin-bottom: 5px;
+    }
+    .contact-form input,
+    .contact-form textarea,
+    .contact-form select {
+      width: 100%;
+      padding: 13px 16px;
+      font-family: 'Arial Black', Arial, sans-serif;
+      font-weight: 700;
+      font-size: 0.95rem;
+      border: 2.5px solid rgba(0,0,0,0.15);
+      border-radius: 6px;
+      background: var(--white);
+      color: var(--black);
+      outline: none;
+      transition: border-color 0.15s;
+      box-sizing: border-box;
+    }
+    .contact-form input:focus,
+    .contact-form textarea:focus,
+    .contact-form select:focus {
+      border-color: var(--gold);
+    }
+    .contact-form textarea {
+      resize: vertical;
+      min-height: 120px;
+    }
+    .contact-form .form-field { display: flex; flex-direction: column; }
+    .contact-form .form-success {
+      display: none;
+      background: #e8f5e9;
+      border: 2px solid #4caf50;
+      border-radius: 6px;
+      padding: 16px 20px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #2e7d32;
+    }
+    .contact-info-block {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+    .contact-info-item h4 {
+      font-size: 0.65rem;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      opacity: 0.4;
+      margin-bottom: 8px;
+    }
+    .contact-info-item p,
+    .contact-info-item a {
+      font-size: 1rem;
+      font-weight: 700;
+      line-height: 1.8;
+      color: var(--black);
+      text-decoration: none;
+    }
+    .contact-info-item a:hover { text-decoration: underline; }
+
+    @media (max-width: 768px) {
+      .contact-layout { grid-template-columns: 1fr; gap: 32px; }
+    }
+
     /* ── FOOTER ── */
     footer {
       background: var(--black);
@@ -696,15 +780,85 @@
 
   <!-- CONTACT & SOCIAL -->
   <section id="contact">
-    <h2>Stay Connected</h2>
-    <p style="font-size:1rem; font-weight:600; color:#444;">Follow us for new drinks, specials, and more:</p>
-    <div class="btn-row" style="margin-top:24px;">
-      <a href="https://www.instagram.com/tealuxcafe.tampa/" target="_blank" class="btn btn-dark">Instagram</a>
-      <a href="https://www.facebook.com/tealuxcafetampa/" target="_blank" class="btn btn-outline-dark">Facebook</a>
-    </div>
-    <div class="contact-detail">
-      <a href="tel:+18134022196">(813) 402-2196</a><br>
-      <a href="mailto:tealuxcafetampaxr@gmail.com">tealuxcafetampaxr@gmail.com</a>
+    <h2>Contact Us</h2>
+    <div class="contact-layout">
+
+      <!-- FORM -->
+      <div>
+        <form
+          name="contact"
+          method="POST"
+          data-netlify="true"
+          netlify-honeypot="bot-field"
+          class="contact-form"
+          id="contact-form"
+        >
+          <input type="hidden" name="form-name" value="contact" />
+          <p style="display:none;"><label>Don't fill this out: <input name="bot-field" /></label></p>
+
+          <div class="form-field">
+            <label for="contact-name">Your Name</label>
+            <input type="text" id="contact-name" name="name" placeholder="Jane Smith" required />
+          </div>
+
+          <div class="form-field">
+            <label for="contact-email">Email Address</label>
+            <input type="email" id="contact-email" name="email" placeholder="jane@email.com" required />
+          </div>
+
+          <div class="form-field">
+            <label for="contact-subject">Subject</label>
+            <select id="contact-subject" name="subject" required>
+              <option value="" disabled selected>Select a topic…</option>
+              <option value="General Question">General Question</option>
+              <option value="Menu / Hours">Menu / Hours</option>
+              <option value="Event / Party Inquiry">Event / Party Inquiry</option>
+              <option value="Catering">Catering</option>
+              <option value="Photobooth">Photobooth</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+
+          <div class="form-field">
+            <label for="contact-message">Message</label>
+            <textarea id="contact-message" name="message" placeholder="Tell us how we can help…" required></textarea>
+          </div>
+
+          <button type="submit" class="btn btn-dark" style="align-self:flex-start;">Send Message</button>
+
+          <div class="form-success" id="form-success">
+            Thanks! We'll get back to you within 1–2 business days.
+          </div>
+        </form>
+      </div>
+
+      <!-- INFO -->
+      <div class="contact-info-block">
+        <div class="contact-info-item">
+          <h4>Address</h4>
+          <p>4311 W Waters Ave, Suite #501<br>Tampa, FL 33614</p>
+        </div>
+        <div class="contact-info-item">
+          <h4>Phone</h4>
+          <a href="tel:+18134022196">(813) 402-2196</a>
+        </div>
+        <div class="contact-info-item">
+          <h4>Email</h4>
+          <a href="mailto:tealuxcafetampaxr@gmail.com">tealuxcafetampaxr@gmail.com</a>
+        </div>
+        <div class="contact-info-item">
+          <h4>Hours</h4>
+          <p>Monday – Sunday<br>11:00 AM – 9:00 PM</p>
+        </div>
+        <div class="contact-info-item">
+          <h4>Follow Us</h4>
+          <div class="btn-row">
+            <a href="https://www.instagram.com/tealuxcafe.tampa/" target="_blank" class="btn btn-dark" style="font-size:0.82rem; padding:10px 20px;">Instagram</a>
+            <a href="https://www.facebook.com/tealuxcafetampa/" target="_blank" class="btn btn-outline-dark" style="font-size:0.82rem; padding:10px 20px;">Facebook</a>
+          </div>
+        </div>
+      </div>
+
     </div>
   </section>
 
@@ -757,6 +911,7 @@
   </footer>
 
   <script>
+    // Mobile nav toggle
     const toggle = document.querySelector('.nav-toggle');
     const mobileNav = document.getElementById('mobile-nav');
     toggle.addEventListener('click', () => {
@@ -764,7 +919,6 @@
       toggle.classList.toggle('open', open);
       toggle.setAttribute('aria-expanded', open);
     });
-    // Close menu when a link is tapped
     document.querySelectorAll('.mobile-nav-link').forEach(link => {
       link.addEventListener('click', () => {
         mobileNav.classList.remove('open');
@@ -772,6 +926,28 @@
         toggle.setAttribute('aria-expanded', 'false');
       });
     });
+
+    // Contact form — async submit so we stay on the page
+    const contactForm = document.getElementById('contact-form');
+    const formSuccess = document.getElementById('form-success');
+    if (contactForm) {
+      contactForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const data = new FormData(contactForm);
+        try {
+          await fetch('/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams(data).toString(),
+          });
+          contactForm.reset();
+          formSuccess.style.display = 'block';
+          contactForm.querySelector('button[type="submit"]').style.display = 'none';
+        } catch {
+          alert('Something went wrong. Please email us directly at tealuxcafetampaxr@gmail.com');
+        }
+      });
+    }
   </script>
 </body>
 </html>
