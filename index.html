@@ -176,6 +176,39 @@
       background: transparent;
       color: var(--crimson);
     }
+    .btn-instagram {
+      background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+      color: var(--white);
+      border: 3px solid transparent;
+    }
+    .btn-instagram:hover { opacity: 0.85; }
+    .btn-facebook {
+      background: #1877F2;
+      color: var(--white);
+      border: 3px solid #1877F2;
+    }
+    .btn-facebook:hover {
+      background: transparent;
+      color: #1877F2;
+    }
+    .btn-doordash {
+      background: #FF3008;
+      color: var(--white);
+      border: 3px solid #FF3008;
+    }
+    .btn-doordash:hover {
+      background: transparent;
+      color: #FF3008;
+    }
+    .btn-ubereats {
+      background: var(--black);
+      color: var(--white);
+      border: 3px solid var(--black);
+    }
+    .btn-ubereats:hover {
+      background: transparent;
+      color: var(--black);
+    }
 
     .btn-row {
       display: flex;
@@ -254,12 +287,12 @@
     .order-inner h2 {
       font-size: 2rem;
       font-weight: 900;
-      color: var(--white);
+      color: var(--black);
       text-transform: uppercase;
     }
     .order-inner p {
       font-size: 1rem;
-      color: rgba(255,255,255,0.7);
+      color: rgba(0,0,0,0.6);
       margin-top: 8px;
       font-weight: 600;
     }
@@ -768,12 +801,12 @@
   <div class="order-strip" id="order">
     <div class="order-inner">
       <div>
-        <h2 style="color:var(--black);">Order Delivery</h2>
-        <p style="color:rgba(0,0,0,0.6);">Get Tealux delivered straight to your door.</p>
+        <h2>Order Delivery</h2>
+        <p>Get Tealux delivered straight to your door.</p>
       </div>
       <div class="btn-row">
-        <a href="https://www.doordash.com/store/tea-lux-tampa-24290466/" target="_blank" class="btn btn-dark">DoorDash</a>
-        <a href="https://www.ubereats.com/store/tealux-cafe4311-west-waters-avenue/DGooevAiWsmBIh7hAAaFsQ" target="_blank" class="btn btn-outline-dark">Uber Eats</a>
+        <a href="https://www.doordash.com/store/tea-lux-tampa-24290466/" target="_blank" class="btn btn-doordash">DoorDash</a>
+        <a href="https://www.ubereats.com/store/tealux-cafe4311-west-waters-avenue/DGooevAiWsmBIh7hAAaFsQ" target="_blank" class="btn btn-ubereats">Uber Eats</a>
       </div>
     </div>
   </div>
@@ -853,8 +886,8 @@
         <div class="contact-info-item">
           <h4>Follow Us</h4>
           <div class="btn-row">
-            <a href="https://www.instagram.com/tealuxcafe.tampa/" target="_blank" class="btn btn-dark" style="font-size:0.82rem; padding:10px 20px;">Instagram</a>
-            <a href="https://www.facebook.com/tealuxcafetampa/" target="_blank" class="btn btn-outline-dark" style="font-size:0.82rem; padding:10px 20px;">Facebook</a>
+            <a href="https://www.instagram.com/tealuxcafe.tampa/" target="_blank" class="btn btn-instagram" style="font-size:0.82rem; padding:10px 20px;">Instagram</a>
+            <a href="https://www.facebook.com/tealuxcafetampa/" target="_blank" class="btn btn-facebook" style="font-size:0.82rem; padding:10px 20px;">Facebook</a>
           </div>
         </div>
       </div>
