@@ -26,7 +26,7 @@ const BOARD_TEMPLATES = {
     image: '/templates/Screen_1.png',
     boxes: [
       { key: 'fruit_teas', x: 31, y: 22, w: 488, h: 703, contentY: 115, style: 'list' },
-      { key: 'milk_tea', x: 1055, y: 22, w: 585, h: 703, contentY: 115, style: 'list' },
+      { key: 'milk_tea', x: 1160, y: 22, w: 480, h: 703, contentY: 115, style: 'list' },
     ],
   },
   screen_2: {
@@ -54,13 +54,33 @@ function money(n) {
   return '$' + Number(n || 0).toFixed(2);
 }
 
+// Cached by src so drag/resize redraws (which can fire many times per
+// second) don't reload the same background/photo over and over.
+const _imageCache = {};
 function loadImage(src) {
-  return new Promise((resolve, reject) => {
+  if (_imageCache[src]) return _imageCache[src];
+  const p = new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => resolve(img);
     img.onerror = reject;
     img.src = src;
   });
+  _imageCache[src] = p;
+  return p;
+}
+
+// Draws user-placed photos (freeform, board-pixel-space coordinates) as
+// their own layer — always between the background and the box text layer,
+// so a photo can never cover/obscure an item list.
+async function drawBoardImages(ctx, images) {
+  for (const im of (images || [])) {
+    try {
+      const img = await loadImage(im.storage_url);
+      ctx.drawImage(img, im.x, im.y, im.w, im.h);
+    } catch (e) {
+      // Broken/unreachable image URL — skip it rather than break the board.
+    }
+  }
 }
 
 function truncateToWidth(ctx, text, maxWidth) {
@@ -322,7 +342,7 @@ function drawRamenBox(ctx, box, section, itemsById) {
  * sections: array of { box_key, style, extra, items: [{ item_id, group_label, sort_order }] }
  * itemsById: { [item_id]: { name, description, price, tag } }
  */
-async function renderBoard(ctx, canvasWidth, canvasHeight, templateKey, sections, itemsById) {
+async function renderBoard(ctx, canvasWidth, canvasHeight, templateKey, sections, itemsById, boardImages) {
   const template = BOARD_TEMPLATES[templateKey];
   ctx.clearRect(0, 0, canvasWidth, canvasHeight);
   if (!template) return;
@@ -331,6 +351,12 @@ async function renderBoard(ctx, canvasWidth, canvasHeight, templateKey, sections
 
   const bg = await loadImage(template.image);
   ctx.drawImage(bg, 0, 0, canvasWidth, canvasHeight);
+
+  // Freeform photo layer — sits between the background and the box text
+  // layer below, in the board's own pixel space (not the reference-pixel
+  // template scale), so it never shifts with template scaling and never
+  // covers text.
+  await drawBoardImages(ctx, boardImages);
 
   const sectionByBox = {};
   sections.forEach((s) => { sectionByBox[s.box_key] = s; });

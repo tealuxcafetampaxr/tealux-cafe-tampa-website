@@ -17,7 +17,7 @@
 
     .section-item-row { display: grid; grid-template-columns: 1fr auto auto auto; align-items: center; gap: 8px; padding: 7px 0; font-family: 'Arial', sans-serif; font-size: 0.85rem; border-bottom: 1px solid var(--border); }
     .section-item-row:last-child { border-bottom: none; }
-    .section-item-row input[type=text] { font-size: 0.72rem; padding: 6px 8px; }
+    .section-item-row input[type=text], .section-item-row select[data-group-select] { font-size: 0.72rem; padding: 6px 8px; width: 100%; }
     .section-item-row .reorder-btn { background: none; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; width: 26px; height: 26px; font-size: 0.7rem; }
     .section-item-row .remove-btn { background: none; border: none; color: var(--danger); cursor: pointer; font-size: 0.9rem; }
 
@@ -26,10 +26,21 @@
 
     .ramen-fields .field { margin-bottom: 14px; }
 
-    #board-canvas { max-width: 100%; height: auto; background: #fff; border: 1px solid var(--border); border-radius: 8px; }
+    #board-canvas { display: block; max-width: 100%; height: auto; background: #fff; border: 1px solid var(--border); border-radius: 8px; }
     .canvas-wrap { position: sticky; top: 90px; text-align: center; }
     .canvas-note { font-family: 'Arial', sans-serif; font-size: 0.75rem; opacity: 0.5; margin-top: 10px; }
     .template-badge { display: inline-block; background: var(--black); color: var(--white); font-size: 0.65rem; font-weight: 700; padding: 4px 12px; border-radius: 50px; letter-spacing: 0.5px; margin-bottom: 16px; }
+
+    .canvas-stage { position: relative; display: inline-block; max-width: 100%; }
+    #image-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+    .image-handle { position: absolute; border: 2px dashed #C35A55; box-sizing: border-box; pointer-events: auto; cursor: move; touch-action: none; }
+    .image-handle .resize-grip { position: absolute; right: -8px; bottom: -8px; width: 16px; height: 16px; background: #C35A55; border: 2px solid #fff; border-radius: 50%; cursor: nwse-resize; touch-action: none; }
+    .image-handle .remove-grip { position: absolute; top: -13px; right: -13px; width: 22px; height: 22px; background: var(--black); color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; cursor: pointer; }
+
+    .image-list-row { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--border); }
+    .image-list-row:last-child { border-bottom: none; }
+    .image-list-row img { width: 36px; height: 36px; object-fit: cover; border-radius: 4px; }
+    .image-list-row .remove-btn { margin-left: auto; }
   </style>
 </head>
 <body>
@@ -60,12 +71,24 @@
     <div class="editor-layout">
       <div>
         <span class="template-badge" id="template-badge"></span>
+
+        <div class="section-card" id="images-card">
+          <div class="section-card-head"><h3>Board Photos</h3></div>
+          <p style="font-family:Arial; font-size:0.75rem; opacity:0.6; margin-bottom:10px;">Drag a photo to move it, drag its corner to resize. Photos sit behind the item text and never cover it.</p>
+          <div id="image-list"></div>
+          <input type="file" id="image-upload-input" accept="image/*" style="display:none;" />
+          <button type="button" class="btn btn-outline" id="btn-upload-image" style="width:100%; margin-top:10px;">+ Upload Photo</button>
+        </div>
+
         <div id="sections-list"></div>
       </div>
 
       <div class="canvas-wrap">
-        <canvas id="board-canvas" width="1920" height="1080"></canvas>
-        <p class="canvas-note">Live preview of the real board design — background and headers are fixed; only the item lists are editable here.</p>
+        <div class="canvas-stage" id="canvas-stage">
+          <canvas id="board-canvas" width="1920" height="1080"></canvas>
+          <div id="image-overlay"></div>
+        </div>
+        <p class="canvas-note">Live preview of the real board design — background and headers are fixed; item lists and photos are editable here.</p>
       </div>
     </div>
   </main>
@@ -80,6 +103,7 @@
     let allItems = [];
     let itemsById = {};
     let sections = []; // { id, box_key, name, style, extra, items: [{id, item_id, group_label, sort_order}] }
+    let boardImages = []; // { id, storage_url, x, y, w, h } — board-pixel-space, freeform
 
     const BOX_LABELS = {
       fruit_teas: 'Fruit Teas', milk_tea: 'Milk Tea',
@@ -160,13 +184,27 @@
       const card = document.createElement('div');
       card.className = 'section-card';
 
+      const existingLabels = [...new Set(
+        section.items.map((si) => (si.group_label || '').trim()).filter(Boolean)
+      )].sort();
+
       const itemRows = section.items.map((si, idx) => {
         const item = itemsById[si.item_id];
+        const current = (si.group_label || '').trim();
+        const isKnown = current === '' || existingLabels.includes(current);
+        const labelOptions = existingLabels.map((l) =>
+          `<option value="${escapeHtml(l)}" ${current === l ? 'selected' : ''}>${escapeHtml(l)}</option>`
+        ).join('');
         return `
           <div class="section-item-row" data-si-id="${si.id}">
             <div>
               <div>${item ? escapeHtml(item.name) + ' — ' + money(item.price) : '(deleted item)'}</div>
-              <input type="text" data-group-label placeholder="Group label (optional, e.g. Signature Blends)" value="${escapeHtml(si.group_label || '')}" />
+              <select data-group-select>
+                <option value="" ${current === '' ? 'selected' : ''}>— no group —</option>
+                ${labelOptions}
+                <option value="__new__" ${!isKnown ? 'selected' : ''}>+ New label…</option>
+              </select>
+              <input type="text" data-group-new placeholder="New group label" value="${!isKnown ? escapeHtml(current) : ''}" style="margin-top:4px; ${isKnown ? 'display:none;' : ''}" />
             </div>
             <button type="button" class="reorder-btn" data-move="up" ${idx === 0 ? 'disabled' : ''}>↑</button>
             <button type="button" class="reorder-btn" data-move="down" ${idx === section.items.length - 1 ? 'disabled' : ''}>↓</button>
@@ -191,8 +229,30 @@
       card.querySelectorAll('[data-si-id]').forEach((row) => {
         const siId = row.dataset.siId;
         const si = section.items.find((x) => String(x.id) === siId);
-        row.querySelector('[data-group-label]').addEventListener('input', (e) => {
+        const groupSelect = row.querySelector('[data-group-select]');
+        const groupNew = row.querySelector('[data-group-new]');
+        groupSelect.addEventListener('change', (e) => {
+          if (e.target.value === '__new__') {
+            groupNew.style.display = '';
+            groupNew.value = '';
+            groupNew.focus();
+          } else {
+            groupNew.style.display = 'none';
+            si.group_label = e.target.value;
+            drawPreview();
+          }
+        });
+        groupNew.addEventListener('input', (e) => {
           si.group_label = e.target.value;
+        });
+        groupNew.addEventListener('blur', () => {
+          if (!si.group_label.trim()) {
+            groupSelect.value = '';
+            groupNew.style.display = 'none';
+            si.group_label = '';
+          }
+          renderSections();
+          drawPreview();
         });
         row.querySelector('[data-remove]').addEventListener('click', () => {
           section.items = section.items.filter((x) => String(x.id) !== siId);
@@ -290,8 +350,165 @@
       canvas.height = height;
       const ctx = canvas.getContext('2d');
       if (!board?.template_key) return;
-      await renderBoard(ctx, width, height, board.template_key, sections, itemsById);
+      await renderBoard(ctx, width, height, board.template_key, sections, itemsById, boardImages);
     }
+
+    async function loadBoardImages() {
+      const { data } = await sb.from('board_images').select('*').eq('board_id', boardId).order('sort_order', { ascending: true });
+      boardImages = data || [];
+    }
+
+    function renderImageList() {
+      const list = document.getElementById('image-list');
+      if (boardImages.length === 0) {
+        list.innerHTML = '<p style="font-family:Arial; font-size:0.8rem; opacity:0.5;">No photos yet.</p>';
+        return;
+      }
+      list.innerHTML = boardImages.map((im) => `
+        <div class="image-list-row">
+          <img src="${im.storage_url}" alt="" />
+          <button type="button" class="remove-btn" data-remove-image="${im.id}">✕</button>
+        </div>
+      `).join('');
+      list.querySelectorAll('[data-remove-image]').forEach((btn) => {
+        btn.addEventListener('click', () => deleteBoardImage(btn.dataset.removeImage));
+      });
+    }
+
+    async function persistImagePosition(im) {
+      await sb.from('board_images').update({ x: im.x, y: im.y, w: im.w, h: im.h }).eq('id', im.id);
+    }
+
+    async function deleteBoardImage(id) {
+      const im = boardImages.find((x) => x.id === id);
+      if (!im) return;
+      if (!confirm('Remove this photo from the board?')) return;
+      await sb.from('board_images').delete().eq('id', id);
+      await sb.storage.from('board-images').remove([im.storage_url.split('/board-images/').pop()]);
+      boardImages = boardImages.filter((x) => x.id !== id);
+      renderImageList();
+      renderImageOverlay();
+      await drawPreview();
+    }
+
+    function renderImageOverlay() {
+      const overlay = document.getElementById('image-overlay');
+      const canvas = document.getElementById('board-canvas');
+      overlay.innerHTML = '';
+      const scaleX = canvas.clientWidth / canvas.width;
+      const scaleY = canvas.clientHeight / canvas.height;
+      if (!scaleX || !scaleY) return;
+
+      boardImages.forEach((im) => {
+        const handle = document.createElement('div');
+        handle.className = 'image-handle';
+        handle.style.left = (im.x * scaleX) + 'px';
+        handle.style.top = (im.y * scaleY) + 'px';
+        handle.style.width = (im.w * scaleX) + 'px';
+        handle.style.height = (im.h * scaleY) + 'px';
+
+        const removeGrip = document.createElement('div');
+        removeGrip.className = 'remove-grip';
+        removeGrip.textContent = '✕';
+        removeGrip.addEventListener('click', (e) => {
+          e.stopPropagation();
+          deleteBoardImage(im.id);
+        });
+
+        const resizeGrip = document.createElement('div');
+        resizeGrip.className = 'resize-grip';
+
+        handle.appendChild(removeGrip);
+        handle.appendChild(resizeGrip);
+        overlay.appendChild(handle);
+
+        handle.addEventListener('pointerdown', (e) => {
+          if (e.target === resizeGrip || e.target === removeGrip) return;
+          e.preventDefault();
+          const startX = e.clientX, startY = e.clientY;
+          const origX = im.x, origY = im.y;
+          const sX = canvas.clientWidth / canvas.width;
+          const sY = canvas.clientHeight / canvas.height;
+          let raf = null;
+          const onMove = (ev) => {
+            im.x = Math.round(origX + (ev.clientX - startX) / sX);
+            im.y = Math.round(origY + (ev.clientY - startY) / sY);
+            handle.style.left = (im.x * sX) + 'px';
+            handle.style.top = (im.y * sY) + 'px';
+            if (!raf) raf = requestAnimationFrame(() => { drawPreview(); raf = null; });
+          };
+          const onUp = () => {
+            window.removeEventListener('pointermove', onMove);
+            window.removeEventListener('pointerup', onUp);
+            persistImagePosition(im);
+            drawPreview();
+          };
+          window.addEventListener('pointermove', onMove);
+          window.addEventListener('pointerup', onUp);
+        });
+
+        resizeGrip.addEventListener('pointerdown', (e) => {
+          e.stopPropagation();
+          e.preventDefault();
+          const startX = e.clientX, startY = e.clientY;
+          const origW = im.w, origH = im.h;
+          const sX = canvas.clientWidth / canvas.width;
+          const sY = canvas.clientHeight / canvas.height;
+          let raf = null;
+          const onMove = (ev) => {
+            im.w = Math.max(20, Math.round(origW + (ev.clientX - startX) / sX));
+            im.h = Math.max(20, Math.round(origH + (ev.clientY - startY) / sY));
+            handle.style.width = (im.w * sX) + 'px';
+            handle.style.height = (im.h * sY) + 'px';
+            if (!raf) raf = requestAnimationFrame(() => { drawPreview(); raf = null; });
+          };
+          const onUp = () => {
+            window.removeEventListener('pointermove', onMove);
+            window.removeEventListener('pointerup', onUp);
+            persistImagePosition(im);
+            drawPreview();
+          };
+          window.addEventListener('pointermove', onMove);
+          window.addEventListener('pointerup', onUp);
+        });
+      });
+    }
+
+    document.getElementById('btn-upload-image').addEventListener('click', () => {
+      document.getElementById('image-upload-input').click();
+    });
+
+    document.getElementById('image-upload-input').addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      e.target.value = '';
+      if (!file) return;
+      const ext = (file.name.split('.').pop() || 'png').toLowerCase();
+      const path = `${boardId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const { error: upErr } = await sb.storage.from('board-images').upload(path, file);
+      if (upErr) {
+        alert('Could not upload photo: ' + upErr.message);
+        return;
+      }
+      const { data: pub } = sb.storage.from('board-images').getPublicUrl(path);
+      const defaultW = 300, defaultH = 300;
+      const { data: row, error } = await sb.from('board_images').insert({
+        board_id: boardId,
+        storage_url: pub.publicUrl,
+        x: Math.round(((board?.width || 1920) - defaultW) / 2),
+        y: Math.round(((board?.height || 1080) - defaultH) / 2),
+        w: defaultW,
+        h: defaultH,
+        sort_order: boardImages.length,
+      }).select().single();
+      if (error) {
+        alert('Could not save photo: ' + error.message);
+        return;
+      }
+      boardImages.push(row);
+      renderImageList();
+      renderImageOverlay();
+      await drawPreview();
+    });
 
     async function saveBoard() {
       // Sync sections (all pre-created by ensureSectionsForTemplate; just update style-specific fields)
@@ -357,8 +574,12 @@
 
       await loadItems();
       await loadBoard();
+      await loadBoardImages();
       renderSections();
+      renderImageList();
       await drawPreview();
+      renderImageOverlay();
+      window.addEventListener('resize', renderImageOverlay);
     })();
   </script>
 </body>

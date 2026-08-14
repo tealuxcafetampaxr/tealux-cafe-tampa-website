@@ -4,23 +4,37 @@ Last worked on: 2026-08-14. Read this before doing anything else on the admin to
 
 ## What's done and confirmed working
 
-- **Repo**: `D:\Tealux Web` is `tealuxcafetampaxr/tealux-cafe-tampa-website`, cloned in place. **Nothing from this work is committed to git yet** — everything below is uncommitted local changes.
-- **Supabase**: project live (bayaotnzbzhotfrupzhx.supabase.co, creds in `.env`, gitignored). All 4 SQL files have now been run by the user, in order, with no errors (2026-08-14): `schema.sql` → `migration_002_templates.sql` → `seed_boards.sql` → `seed_items.sql`. Tables, RLS, storage bucket, the 3 real boards (Screen 1/2/3) with their fixed sections, and the full ~76-item catalog (linked into sections via `section_items`, including the Self Serve Ramen box's `extra` fields) all exist in the live DB now.
+- **Repo**: `D:\Tealux Web` is `tealuxcafetampaxr/tealux-cafe-tampa-website`. The first version of the admin tool (scaffold, renderer, schema/migration/seed SQL, real menu data) was committed and pushed to `main` on 2026-08-14 (commit `431abe4`). It should be live at `tealuxcafetampa.com/admin/login.html` once Netlify finishes deploying.
+- **Supabase**: project live (bayaotnzbzhotfrupzhx.supabase.co, creds in `.env`, gitignored). Live DB has run, in order: `schema.sql` → `migration_002_templates.sql` → `seed_boards.sql` → `seed_items.sql` → `migration_003_board_images.sql` (2026-08-14, no errors). Tables, RLS, storage buckets (`item-images` + `board-images`), the 3 real boards (Screen 1/2/3) with their fixed sections, the full ~76-item catalog, and the `board_images` table all exist on the live DB now.
 - **Employee accounts**: one shared login exists (`tealuxcafetampaxr@gmail.com`). Kha and Chao both use it — no per-person accounts needed.
-- **`/admin/` scaffold**: login.html, items.html, item.html, boards.html, board.html all built and working (login flow verified end-to-end against the live project in-browser; auth-gate redirect verified).
-- **Board renderer** (`admin/js/board-renderer.js`): draws the real `templates/Screen_1/2/3.png` backgrounds (box coordinates measured precisely via Python/PIL color-region detection, not eyeballed) and overlays catalog items into each box — auto-shrinking font / falling back to 2 columns if a box overflows, subheadings from `group_label` (e.g. "SIGNATURE BLENDS"), NEW/BEST_SELLER/LIMITED tag pills, and a special layout for the Self Serve Ramen box (price + free-toppings badge + fixed steps + ingredients line). Verified visually against `templates/examples/` mockups using mock data (screenshot comparison) — I couldn't log in myself to test with real auth since I don't handle passwords, so **this still needs a real click-through test by Kha/Chao once items exist**.
-- **Real menu data extracted**: `menu-source/extracted_items.json` has the full, corrected current menu (~76 items across 7 sections) pulled from `menu-source/Tealux_Menu_3Screen MOD(1).pptx` via python-pptx, cross-checked against `templates/examples/`. Two ordering bugs in the raw PowerPoint were fixed here (Fried Gyoza → street_food not breakfast_bakery; Avopuff → smoothies not orphaned near toppings) and confirmed correct by the user. Toppings intentionally excluded (static box, not catalog-driven, per user).
-- **`menu-source/`** folder holds the PPTX, a zip of isolated food photos, and ~12 individual box/hero photos — all gitignored (large, not needed at runtime).
+- **`/admin/` scaffold**: login.html, items.html, item.html, boards.html, board.html all built.
+- **Real menu data**: `menu-source/extracted_items.json` (~76 items, corrected against the PPTX and `templates/examples/`), seeded into the live DB.
+
+## Bugs found during first real usage (2026-08-14) and fixed — NOT yet committed
+
+The user did the first real click-through and found several issues. All fixed in the working tree but still uncommitted:
+
+1. **`items.html` and `item.html` were stuck on an infinite loading spinner.** Root cause: both called `supabase.from(...)` where `supabase` is just the CDN library namespace (has `.createClient` but no `.from`) — the actual client instance is `sb` (from `supabase-client.js`). This threw an uncaught promise rejection before the loading spinner was ever hidden. Fixed all 3 call sites (`items.html` ×2, `item.html` ×1) to use `sb`.
+2. **Milk Tea items rendered too far left, off the box.** The `milk_tea` box's coded left edge (`x: 1055`) was wrong — re-measured via PIL color-boundary detection on `templates/Screen_1.png` and confirmed the real cream-colored content area starts at `x: 1160` (the gap between 1055–1160 is a decorative graphic between the two Screen 1 boxes, not part of milk_tea's box). Top/bottom/right edges were already correct (that's why price placement looked fine). Fixed in `BOARD_TEMPLATES.screen_1` in `board-renderer.js`. **Only milk_tea was re-verified this precisely — the other 6 boxes have NOT been re-audited pixel-by-pixel; a quick automated cross-check was inconclusive (the page background is the same cream family as the box interiors in places, so simple color detection can't reliably tell them apart). If other boxes look off during testing, re-measure them the same way (PIL color-boundary scan, not eyeballing).**
+3. **Group label typos** (the per-item subheading like "Signature Blends" that prints on the actual board) — was a free-text input, so a typo both prints wrong on the board and fragments grouping (two near-identical labels = two headings instead of one). Changed to a dropdown of labels already used in that section, plus "+ New label…" to add one. Also fixed a related bug where editing this field never triggered a live-preview redraw.
+
+## New feature built 2026-08-14, NOT yet run/tested — freeform board photos
+
+User wants photo placement to be freeform (upload anywhere, drag to move, handle to resize), not the originally-planned "one fixed photo per box." Built:
+
+- `supabase/migration_003_board_images.sql` — new `board_images` table (board_id, storage_url, x/y/w/h, sort_order) + new public `board-images` storage bucket + RLS. **Not run against the live DB yet.**
+- `admin/js/board-renderer.js` — added `drawBoardImages()`, called from `renderBoard()` between the background and the box-text layer, so photos can never cover item text. Also added an image cache (`_imageCache`) since drag/resize can trigger many redraws per second.
+- `admin/board.html` — new "Board Photos" panel (upload button, thumbnail list, delete), and a drag/resize overlay on the canvas (`#image-overlay`, `.image-handle`) using pointer events. Position/size persist to the DB immediately on drag-end (not gated behind the "Save" button, which only covers sections/items).
+
+This supersedes the earlier plan (`CONTINUE_FROM_HERE.md` used to say "add one fixed photo per box, matching `templates/examples/`") — that's no longer the approach; freeform is.
 
 ## Not done yet — pick up here
 
-1. ~~**Write and run `supabase/seed_items.sql`**~~ — done (2026-08-14). Catalog is fully seeded and linked into boards on the live DB.
-2. **Real click-through test** — pick up here. Log in as the shared account, open each of the 3 boards, confirm the live-rendered canvas looks right with real data (not mock data this time), export a PNG, sanity-check it. This is the first real end-to-end verification of the renderer.
-3. **Add box photos to the renderer** — user decided (2026-08-13) to add one representative photo per box for `street_food`, `breakfast_bakery`, `cakes_desserts`, `self_serve_ramen` (matching the fancier look in `templates/examples/`), using photos from `menu-source/`. Not yet implemented in `board-renderer.js` — needs: deciding where each photo sits within its box (single hero vs small grid — `cakes_desserts`' example shows ~5 small photos, others show 1-2), then extending `drawListBox`/`drawRamenBox` to draw them without breaking the auto-compacting text layout math (text content area shrinks to make room for photos).
-4. **Item photos**: individual per-item photos (not box photos) still need uploading through `/admin/item.html`'s uploader — nothing automated for this, it's a manual per-item task for Kha/Chao once they're using the tool day to day.
-5. **Commit and push** — ask the user explicitly before doing this (per standing instructions), since nothing has been committed yet.
+1. **Real click-through test, this time actually thorough** — pick up here. Log in, open each of the 3 boards, check every box's text position (not just milk_tea), try the new group-label dropdown, try uploading/dragging/resizing a board photo, export a PNG.
+2. **Item photos**: individual per-item photos (not board photos) still need uploading through `/admin/item.html`'s uploader — manual per-item task for Kha/Chao once they're using the tool day to day.
+3. **Commit and push** the bug fixes + freeform image feature — ask the user explicitly before doing this (per standing instructions).
 
 ## Quick orientation if resuming cold
 
 - Read `claude-code-prompt-tealux-menu-webapp.md` (original spec) and `admin/SETUP.md` (setup + how the renderer works) first.
-- The board model is NOT freeform/themeable — it's 3 fixed-design PNGs with named content boxes at exact coordinates. Don't reintroduce a generic drag-and-drop board builder; that was explicitly rejected in favor of matching the real existing TV designs.
+- The **section/box layout** is NOT freeform — it's 3 fixed-design PNGs with named content boxes at exact coordinates; don't reintroduce a generic drag-and-drop *layout* builder, that was explicitly rejected in favor of matching the real TV designs. **Photos are the one deliberate exception** — those are freeform (upload/drag/resize) per the 2026-08-14 decision above, layered so they never interfere with the fixed text layout.

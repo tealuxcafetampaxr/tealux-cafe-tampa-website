@@ -204,7 +204,7 @@
       document.getElementById('btn-featured').classList.toggle('active', featured);
       document.getElementById('btn-delete').style.display = '';
 
-      const { data: imgRows } = await supabase
+      const { data: imgRows } = await sb
         .from('item_images')
         .select('*')
         .eq('item_id', itemId)
