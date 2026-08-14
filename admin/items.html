@@ -36,6 +36,7 @@
         <option value="">All statuses</option>
         <option value="active">Active</option>
         <option value="sold_out">Sold Out</option>
+        <option value="inactive">Inactive</option>
       </select>
       <select id="filter-tag">
         <option value="">All tags</option>
@@ -86,6 +87,10 @@
 
     function tagLabel(tag) {
       return { none: '', new: 'New', best_seller: 'Best Seller', limited: 'Limited' }[tag] || '';
+    }
+
+    function statusLabel(status) {
+      return { active: 'Active', sold_out: 'Sold Out', inactive: 'Inactive' }[status] || status;
     }
 
     function populateCategoryFilter() {
@@ -177,7 +182,7 @@
           </td>
           <td>${escapeHtml(item.category || '—')}</td>
           <td>${money(item.price)}</td>
-          <td><span class="badge badge-${item.status}">${item.status === 'active' ? 'Active' : 'Sold Out'}</span></td>
+          <td><span class="badge badge-${item.status}">${statusLabel(item.status)}</span></td>
           <td>${tagLabel(item.tag) ? `<span class="badge badge-tag">${tagLabel(item.tag)}</span>` : ''}</td>
         `;
 

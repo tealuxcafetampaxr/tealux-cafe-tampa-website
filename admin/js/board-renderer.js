@@ -106,7 +106,10 @@ function buildRows(sectionItems, itemsById) {
   let lastLabel = null;
   sectionItems.forEach((si) => {
     const item = itemsById[si.item_id];
-    if (!item) return;
+    // Inactive items are deliberately excluded from boards — skip even if
+    // still linked from before it was deactivated, rather than requiring
+    // it to be manually removed from every board first.
+    if (!item || item.status === 'inactive') return;
     const label = (si.group_label || '').trim();
     if (label && label !== lastLabel) {
       rows.push({ type: 'heading', text: label });
@@ -297,7 +300,7 @@ function drawRamenBox(ctx, box, section, itemsById) {
 
   const priceItemId = section.extra && section.extra.price_item_id;
   const item = priceItemId ? itemsById[priceItemId] : null;
-  const priceStr = item ? money(item.price) : '—';
+  const priceStr = (item && item.status !== 'inactive') ? money(item.price) : '—';
   const freeToppings = (section.extra && section.extra.free_toppings_count) || 0;
   const ingredients = (section.extra && section.extra.ingredients) || '';
 

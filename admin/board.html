@@ -86,6 +86,11 @@
         </div>
 
         <div id="sections-list"></div>
+
+        <div class="section-card">
+          <div class="section-card-head"><h3>Recent Changes <span class="box-tag">last 90 days</span></h3></div>
+          <div id="board-history-list" class="history-list"></div>
+        </div>
       </div>
 
       <div class="canvas-wrap">
@@ -109,6 +114,70 @@
     let itemsById = {};
     let sections = []; // { id, box_key, name, style, extra, items: [{id, item_id, group_label, sort_order}] }
     let boardImages = []; // { id, storage_url, x, y, w, h } — board-pixel-space, freeform
+    let originalSections = null; // snapshot for diffing at save time (edit history) — NOT board photos, those save immediately
+    let dirty = false;
+
+    function markDirty() { dirty = true; }
+    warnOnUnsavedChanges(() => dirty);
+
+    function diffSections(before, after) {
+      const lines = [];
+      const beforeById = {};
+      (before || []).forEach((s) => { beforeById[s.id] = s; });
+
+      (after || []).forEach((s) => {
+        const prev = beforeById[s.id];
+        if (!prev) return; // sections are pre-created, shouldn't happen
+        const label = BOX_LABELS[s.box_key] || s.name;
+
+        if (s.style === 'special') {
+          const pe = prev.extra || {};
+          const ne = s.extra || {};
+          if ((pe.price_item_id || null) !== (ne.price_item_id || null)) {
+            const prevName = pe.price_item_id ? (itemsById[pe.price_item_id]?.name || 'unknown item') : 'none';
+            const newName = ne.price_item_id ? (itemsById[ne.price_item_id]?.name || 'unknown item') : 'none';
+            lines.push(`${label}: priced item changed from "${prevName}" to "${newName}"`);
+          }
+          if ((pe.free_toppings_count || 0) !== (ne.free_toppings_count || 0)) {
+            lines.push(`${label}: free toppings count changed from ${pe.free_toppings_count || 0} to ${ne.free_toppings_count || 0}`);
+          }
+          if ((pe.ingredients || '') !== (ne.ingredients || '')) {
+            lines.push(`${label}: ingredients updated`);
+          }
+          return;
+        }
+
+        const pe = prev.extra || {};
+        const ne = s.extra || {};
+        const prevSpacing = pe.line_spacing || 1;
+        const newSpacing = ne.line_spacing || 1;
+        if (prevSpacing !== newSpacing) {
+          lines.push(`${label}: row spacing changed to ${newSpacing.toFixed(2)}×`);
+        }
+
+        const prevItemIds = new Set((prev.items || []).map((si) => si.item_id));
+        const newItemIds = new Set((s.items || []).map((si) => si.item_id));
+        (s.items || []).forEach((si) => {
+          if (!prevItemIds.has(si.item_id)) {
+            lines.push(`${label}: added "${itemsById[si.item_id]?.name || 'unknown item'}"`);
+          }
+        });
+        (prev.items || []).forEach((si) => {
+          if (!newItemIds.has(si.item_id)) {
+            lines.push(`${label}: removed "${itemsById[si.item_id]?.name || 'unknown item'}"`);
+          }
+        });
+        (s.items || []).forEach((si) => {
+          const prevSi = (prev.items || []).find((x) => x.item_id === si.item_id);
+          if (prevSi && (prevSi.group_label || '') !== (si.group_label || '')) {
+            const name = itemsById[si.item_id]?.name || 'unknown item';
+            lines.push(`${label}: group label for "${name}" changed to "${si.group_label || '(none)'}"`);
+          }
+        });
+      });
+
+      return lines;
+    }
 
     const BOX_LABELS = {
       fruit_teas: 'Fruit Teas', milk_tea: 'Milk Tea',
@@ -218,7 +287,7 @@
         `;
       }).join('');
 
-      const availableItems = allItems.filter((i) => !section.items.some((si) => si.item_id === i.id));
+      const availableItems = allItems.filter((i) => i.status !== 'inactive' && !section.items.some((si) => si.item_id === i.id));
       const options = availableItems.map((i) => `<option value="${i.id}">${escapeHtml(i.name)}</option>`).join('');
 
       const spacing = (section.extra && section.extra.line_spacing) || 1;
@@ -242,6 +311,7 @@
         const value = parseFloat(e.target.value);
         section.extra = { ...section.extra, line_spacing: value };
         card.querySelector('[data-spacing-value]').textContent = value.toFixed(2) + '×';
+        markDirty();
         drawPreview();
       });
 
@@ -258,6 +328,7 @@
           } else {
             groupNew.style.display = 'none';
             si.group_label = e.target.value;
+            markDirty();
             drawPreview();
           }
         });
@@ -270,11 +341,13 @@
             groupNew.style.display = 'none';
             si.group_label = '';
           }
+          markDirty();
           renderSections();
           drawPreview();
         });
         row.querySelector('[data-remove]').addEventListener('click', () => {
           section.items = section.items.filter((x) => String(x.id) !== siId);
+          markDirty();
           renderSections();
           drawPreview();
         });
@@ -285,6 +358,7 @@
             const j = i + dir;
             if (j < 0 || j >= section.items.length) return;
             [section.items[i], section.items[j]] = [section.items[j], section.items[i]];
+            markDirty();
             renderSections();
             drawPreview();
           });
@@ -300,6 +374,7 @@
           group_label: '',
           sort_order: section.items.length,
         });
+        markDirty();
         renderSections();
         drawPreview();
       });
@@ -312,7 +387,10 @@
       card.className = 'section-card';
       const extra = section.extra || {};
       const currentItem = extra.price_item_id ? itemsById[extra.price_item_id] : null;
-      const options = allItems.map((i) => `<option value="${i.id}" ${extra.price_item_id === i.id ? 'selected' : ''}>${escapeHtml(i.name)} — ${money(i.price)}</option>`).join('');
+      const options = allItems
+        .filter((i) => i.status !== 'inactive' || i.id === extra.price_item_id)
+        .map((i) => `<option value="${i.id}" ${extra.price_item_id === i.id ? 'selected' : ''}>${escapeHtml(i.name)} — ${money(i.price)}</option>`)
+        .join('');
 
       card.innerHTML = `
         <div class="section-card-head">
@@ -336,14 +414,17 @@
 
       card.querySelector('[data-ramen-item]').addEventListener('change', (e) => {
         section.extra = { ...section.extra, price_item_id: e.target.value || null };
+        markDirty();
         drawPreview();
       });
       card.querySelector('[data-ramen-toppings]').addEventListener('input', (e) => {
         section.extra = { ...section.extra, free_toppings_count: parseInt(e.target.value, 10) || 0 };
+        markDirty();
         drawPreview();
       });
       card.querySelector('[data-ramen-ingredients]').addEventListener('input', (e) => {
         section.extra = { ...section.extra, ingredients: e.target.value };
+        markDirty();
         drawPreview();
       });
 
@@ -530,6 +611,8 @@
     });
 
     async function saveBoard() {
+      const historyLines = diffSections(originalSections || [], sections);
+
       // Sync sections (all pre-created by ensureSectionsForTemplate; just update style-specific fields)
       for (const section of sections) {
         await sb.from('sections').update({ extra: section.extra || {} }).eq('id', section.id);
@@ -560,10 +643,15 @@
         }
       }
 
+      await logEditHistory('board', boardId, historyLines);
+
       await sb.from('boards').update({}).eq('id', boardId); // touch updated_at
       await loadBoard();
+      originalSections = JSON.parse(JSON.stringify(sections));
+      dirty = false;
       renderSections();
       drawPreview();
+      renderHistoryList('board-history-list', await loadEditHistory('board', boardId));
     }
 
     document.getElementById('btn-save').addEventListener('click', async () => {
@@ -598,11 +686,13 @@
 
       await loadItems();
       await loadBoard();
+      originalSections = JSON.parse(JSON.stringify(sections));
       await loadBoardImages();
       renderSections();
       renderImageList();
       await drawPreview();
       renderImageOverlay();
+      renderHistoryList('board-history-list', await loadEditHistory('board', boardId));
       window.addEventListener('resize', renderImageOverlay);
     })();
   </script>

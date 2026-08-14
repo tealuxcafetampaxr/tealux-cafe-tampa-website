@@ -81,6 +81,7 @@
           <select id="f-status">
             <option value="active">Active</option>
             <option value="sold_out">Sold Out</option>
+            <option value="inactive">Inactive (hidden from menu boards)</option>
           </select>
         </div>
         <div class="sidebar-section">
@@ -106,6 +107,10 @@
             <button type="button" class="star-btn" id="btn-featured">★</button>
           </div>
         </div>
+        <div class="sidebar-section" id="history-section" style="display:none;">
+          <label>Recent Changes <span style="opacity:0.5; font-weight:400; text-transform:none;">(last 90 days)</span></label>
+          <div id="history-list" class="history-list"></div>
+        </div>
       </div>
     </div>
   </main>
@@ -117,6 +122,39 @@
     const itemId = params.get('id');
     let images = []; // { id, storage_url, sort_order, is_primary }
     let featured = false;
+    let originalItem = null;
+    let dirty = false;
+
+    function markDirty() { dirty = true; }
+    warnOnUnsavedChanges(() => dirty);
+
+    function diffItem(before, after) {
+      const tagText = { none: 'None', new: 'New', best_seller: 'Best Seller', limited: 'Limited' };
+      const statusText = { active: 'Active', sold_out: 'Sold Out', inactive: 'Inactive' };
+      const lines = [];
+      if ((before.name || '') !== after.name) {
+        lines.push(`Name changed from "${before.name || ''}" to "${after.name}"`);
+      }
+      if (Number(before.price || 0) !== Number(after.price || 0)) {
+        lines.push(`Price changed from $${Number(before.price || 0).toFixed(2)} to $${Number(after.price).toFixed(2)}`);
+      }
+      if ((before.status || 'active') !== after.status) {
+        lines.push(`Status changed from ${statusText[before.status] || before.status} to ${statusText[after.status] || after.status}`);
+      }
+      if ((before.tag || 'none') !== after.tag) {
+        lines.push(`Tag changed from ${tagText[before.tag] || before.tag || 'None'} to ${tagText[after.tag] || after.tag}`);
+      }
+      if ((before.category || '') !== (after.category || '')) {
+        lines.push(`Category changed from "${before.category || '—'}" to "${after.category || '—'}"`);
+      }
+      if ((before.description || '') !== (after.description || '')) {
+        lines.push('Description updated');
+      }
+      if (!!before.featured !== !!after.featured) {
+        lines.push(after.featured ? 'Marked as featured' : 'Unmarked as featured');
+      }
+      return lines;
+    }
 
     function showError(message) {
       const box = document.getElementById('form-error');
@@ -166,6 +204,7 @@
     }
 
     document.getElementById('f-category').addEventListener('change', (e) => {
+      markDirty();
       const newInput = document.getElementById('f-category-new');
       if (e.target.value === '__new__') {
         newInput.style.display = '';
@@ -174,6 +213,11 @@
       } else {
         newInput.style.display = 'none';
       }
+    });
+
+    ['f-name', 'f-description', 'f-price', 'f-status', 'f-category-new', 'f-tag'].forEach((id) => {
+      document.getElementById(id).addEventListener('input', markDirty);
+      document.getElementById(id).addEventListener('change', markDirty);
     });
 
     function renderGallery() {
@@ -202,6 +246,7 @@
 
     function makePrimary(id) {
       images = images.map((img) => ({ ...img, is_primary: img.id === id }));
+      markDirty();
       renderGallery();
     }
 
@@ -209,6 +254,7 @@
       const wasPrimary = images.find((img) => img.id === id)?.is_primary;
       images = images.filter((img) => img.id !== id);
       if (wasPrimary && images.length > 0) images[0].is_primary = true;
+      markDirty();
       renderGallery();
     }
 
@@ -233,12 +279,14 @@
           is_primary: images.length === 0,
         });
       }
+      markDirty();
       renderGallery();
       e.target.value = '';
     });
 
     document.getElementById('btn-featured').addEventListener('click', () => {
       featured = !featured;
+      markDirty();
       document.getElementById('btn-featured').classList.toggle('active', featured);
     });
 
@@ -253,6 +301,7 @@
         showError('Item not found.');
         return;
       }
+      originalItem = item;
       document.getElementById('page-title').textContent = item.name || 'Edit Item';
       document.getElementById('f-name').value = item.name || '';
       document.getElementById('f-description').value = item.description || '';
@@ -271,6 +320,9 @@
         .order('sort_order', { ascending: true });
       images = imgRows || [];
       renderGallery();
+
+      document.getElementById('history-section').style.display = '';
+      renderHistoryList('history-list', await loadEditHistory('item', itemId));
     }
 
     async function save() {
@@ -289,14 +341,18 @@
       }
 
       let id = itemId;
+      let historyLines;
       if (id) {
+        historyLines = diffItem(originalItem || {}, payload);
         const { error } = await sb.from('items').update(payload).eq('id', id);
         if (error) { showError(error.message); return; }
       } else {
         const { data, error } = await sb.from('items').insert(payload).select().single();
         if (error) { showError(error.message); return; }
         id = data.id;
+        historyLines = ['Item created'];
       }
+      await logEditHistory('item', id, historyLines);
 
       // Sync images: delete removed rows, insert new ones, update primary/sort.
       const { data: existingRows } = await sb.from('item_images').select('id').eq('item_id', id);
@@ -324,6 +380,7 @@
         }
       }
 
+      dirty = false;
       window.location.href = '/admin/items.html';
     }
 
@@ -332,6 +389,7 @@
     document.getElementById('btn-delete').addEventListener('click', async () => {
       if (!itemId) return;
       if (!confirm('Delete this item? This cannot be undone and will remove it from any menu boards.')) return;
+      dirty = false;
       const { error } = await sb.from('items').delete().eq('id', itemId);
       if (error) { showError(error.message); return; }
       window.location.href = '/admin/items.html';

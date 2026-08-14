@@ -8,8 +8,10 @@ In the Supabase dashboard for this project (bayaotnzbzhotfrupzhx), in **SQL Edit
 3. `supabase/seed_boards.sql` — creates the 3 real boards (Screen 1/2/3) with their fixed content boxes already in place. Safe to re-run.
 4. `supabase/seed_items.sql` — seeds the real ~76-item catalog and links it into the 3 boards' sections. Safe to re-run.
 5. `supabase/migration_003_board_images.sql` — adds the `board_images` table and public `board-images` storage bucket, for freeform user-placed photos on a board (drag to move/resize in the board editor).
+6. `supabase/migration_004_inactive_status.sql` — adds `'inactive'` as a valid `items.status`, for items that should be excluded from every menu board.
+7. `supabase/migration_005_edit_history.sql` — adds the `edit_history` table, powering the "Recent Changes" panel on `item.html` and `board.html`.
 
-If you're setting this up fresh (no `schema.sql` run yet), just run all five in order.
+If you're setting this up fresh (no `schema.sql` run yet), just run all seven in order.
 
 ## 2. Create employee accounts
 
@@ -39,6 +41,20 @@ Nothing extra needed — `/admin/` ships with the rest of the site on the next N
 - The "Self Serve Ramen" box is a one-off layout (`style: 'special'`): pick one catalog item for its price, set a free-toppings count and an ingredients string — the numbered steps are fixed copy in the renderer, not editable.
 - Adding a genuinely new screen design later means measuring its box coordinates and adding an entry to `BOARD_TEMPLATES` in `board-renderer.js` — there's no generic drag-and-drop layout builder.
 - **Board photos** are separate from the box template system: freeform user-uploaded images (`board_images` table), positioned/sized in the board's own pixel space (not the reference-template scale), dragged/resized via on-canvas handles in `/admin/board.html`. They render as their own layer strictly between the background and the box text layer, so a photo can never cover an item list — text always wins. Position/size persist to the DB immediately on drag-end, independent of the sections "Save" button.
+
+## Edit history and unsaved-changes warning
+
+`item.html` and `board.html` both show a "Recent Changes" panel (last 90 days) and warn via the
+browser's native dialog if you try to leave with unsaved edits.
+
+- History entries are **human-readable summaries generated at save time** (e.g. "Price changed
+  from $6.50 to $6.75"), not raw before/after data — only captures edits made through this admin
+  tool. "90 days" is a rolling display window (query filter on `changed_at`), not row deletion.
+- No per-person attribution — the shared login means history only records *what* changed and
+  *when*, not *who*.
+- Board photos save immediately on drag-end (see above) and are intentionally excluded from the
+  unsaved-changes check; only Save-gated edits (item fields, section items/labels, row spacing,
+  ramen fields) count as "dirty."
 
 ## Not yet wired in
 

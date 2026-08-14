@@ -234,6 +234,7 @@ table.item-table { width: 100%; border-collapse: collapse; }
 }
 .badge-active { background: rgba(46,125,50,0.12); color: var(--success); }
 .badge-sold_out { background: rgba(192,57,43,0.12); color: var(--danger); }
+.badge-inactive { background: rgba(0,0,0,0.08); color: rgba(0,0,0,0.5); }
 .badge-tag { background: rgba(212,183,0,0.15); color: var(--crimson2); }
 .badge-featured { background: var(--black); color: var(--white); }
 
@@ -322,6 +323,13 @@ table.item-table { width: 100%; border-collapse: collapse; }
   opacity: 0.5;
 }
 .board-card-new:hover { opacity: 1; border-color: var(--black); }
+
+/* ── EDIT HISTORY ── */
+.history-list { font-family: 'Arial', sans-serif; font-size: 0.8rem; max-height: 320px; overflow-y: auto; }
+.history-entry { padding: 8px 0; border-bottom: 1px solid var(--border); }
+.history-entry:last-child { border-bottom: none; }
+.history-entry .history-date { display: block; font-size: 0.68rem; opacity: 0.5; margin-top: 2px; }
+.history-empty { opacity: 0.5; padding: 8px 0; }
 
 /* ── LOADING ── */
 .loading-spinner {
