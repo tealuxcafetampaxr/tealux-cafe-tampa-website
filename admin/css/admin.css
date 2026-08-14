@@ -164,6 +164,24 @@ textarea { resize: vertical; min-height: 90px; }
 }
 .form-error.show { display: block; }
 
+/* ── ITEMS TOOLBAR (search / filter) ── */
+.items-toolbar {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 18px;
+}
+.items-toolbar input[type=search] { flex: 1; min-width: 200px; }
+.items-toolbar select { width: auto; min-width: 140px; }
+.items-toolbar input, .items-toolbar select { padding: 10px 14px; font-size: 0.85rem; }
+.items-toolbar .results-count {
+  font-family: 'Arial', sans-serif;
+  font-size: 0.75rem;
+  opacity: 0.5;
+  white-space: nowrap;
+}
+
 /* ── TABLE (item list) ── */
 .table-wrap { overflow-x: auto; }
 table.item-table { width: 100%; border-collapse: collapse; }
@@ -176,6 +194,9 @@ table.item-table { width: 100%; border-collapse: collapse; }
   padding: 10px 14px;
   border-bottom: 2px solid var(--border);
 }
+.item-table th.sortable { cursor: pointer; user-select: none; white-space: nowrap; }
+.item-table th.sortable:hover { opacity: 1; }
+.item-table th .sort-arrow { display: inline-block; width: 10px; font-size: 0.65rem; }
 .item-table td {
   padding: 12px 14px;
   border-bottom: 1px solid var(--border);

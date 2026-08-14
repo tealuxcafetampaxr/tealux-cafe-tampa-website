@@ -85,7 +85,11 @@
         </div>
         <div class="sidebar-section">
           <label for="f-category">Category</label>
-          <input type="text" id="f-category" placeholder="e.g. Milk Tea, Fruit Tea, Dessert" />
+          <select id="f-category">
+            <option value="">— no category —</option>
+            <option value="__new__">+ New category…</option>
+          </select>
+          <input type="text" id="f-category-new" placeholder="New category name" style="display:none; margin-top:8px;" />
         </div>
         <div class="sidebar-section">
           <label for="f-tag">Tag</label>
@@ -119,6 +123,58 @@
       box.textContent = message;
       box.classList.add('show');
     }
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    async function loadCategories() {
+      const { data } = await sb.from('items').select('category');
+      const cats = [...new Set((data || []).map((r) => (r.category || '').trim()).filter(Boolean))].sort();
+      const select = document.getElementById('f-category');
+      select.innerHTML = '<option value="">— no category —</option>' +
+        cats.map((c) => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('') +
+        '<option value="__new__">+ New category…</option>';
+      return cats;
+    }
+
+    function setCategoryValue(value) {
+      const select = document.getElementById('f-category');
+      const newInput = document.getElementById('f-category-new');
+      const trimmed = (value || '').trim();
+      if (!trimmed) {
+        select.value = '';
+        newInput.style.display = 'none';
+      } else if ([...select.options].some((o) => o.value === trimmed)) {
+        select.value = trimmed;
+        newInput.style.display = 'none';
+      } else {
+        select.value = '__new__';
+        newInput.value = trimmed;
+        newInput.style.display = '';
+      }
+    }
+
+    function getCategoryValue() {
+      const select = document.getElementById('f-category');
+      if (select.value === '__new__') {
+        return document.getElementById('f-category-new').value.trim();
+      }
+      return select.value;
+    }
+
+    document.getElementById('f-category').addEventListener('change', (e) => {
+      const newInput = document.getElementById('f-category-new');
+      if (e.target.value === '__new__') {
+        newInput.style.display = '';
+        newInput.value = '';
+        newInput.focus();
+      } else {
+        newInput.style.display = 'none';
+      }
+    });
 
     function renderGallery() {
       const grid = document.getElementById('gallery-grid');
@@ -187,7 +243,11 @@
     });
 
     async function loadItem() {
-      if (!itemId) return;
+      await loadCategories();
+      if (!itemId) {
+        setCategoryValue('');
+        return;
+      }
       const { data: item, error } = await sb.from('items').select('*').eq('id', itemId).single();
       if (error || !item) {
         showError('Item not found.');
@@ -198,7 +258,7 @@
       document.getElementById('f-description').value = item.description || '';
       document.getElementById('f-price').value = item.price ?? '';
       document.getElementById('f-status').value = item.status || 'active';
-      document.getElementById('f-category').value = item.category || '';
+      setCategoryValue(item.category);
       document.getElementById('f-tag').value = item.tag || 'none';
       featured = !!item.featured;
       document.getElementById('btn-featured').classList.toggle('active', featured);
@@ -219,7 +279,7 @@
         description: document.getElementById('f-description').value.trim(),
         price: parseFloat(document.getElementById('f-price').value) || 0,
         status: document.getElementById('f-status').value,
-        category: document.getElementById('f-category').value.trim(),
+        category: getCategoryValue(),
         tag: document.getElementById('f-tag').value,
         featured,
       };
