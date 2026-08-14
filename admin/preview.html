@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Preview All Boards | Tealux Cafe Tampa Admin</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <link rel="stylesheet" href="/admin/css/admin.css" />
+  <style>
+    .preview-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px; }
+    .preview-board { background: #fff; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+    .preview-board canvas { display: block; width: 100%; height: auto; background: #fff; }
+    .preview-board-label { padding: 12px 16px; font-family: 'Arial', sans-serif; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+    .preview-board-label h3 { font-size: 0.9rem; text-transform: uppercase; letter-spacing: -0.2px; }
+    .preview-board-label p { font-size: 0.7rem; opacity: 0.5; margin-top: 2px; }
+    .preview-board-label a { font-size: 0.7rem; font-weight: 700; text-decoration: none; opacity: 0.6; white-space: nowrap; }
+    .preview-board-label a:hover { opacity: 1; }
+  </style>
+</head>
+<body>
+  <nav class="admin-nav">
+    <a href="/admin/items.html" class="admin-logo">
+      <span class="admin-logo-main">TEALUX CAFE</span>
+      <span class="admin-logo-sub">EMPLOYEE TOOLS</span>
+    </a>
+    <ul class="admin-nav-links">
+      <li><a href="/admin/items.html">Items</a></li>
+      <li><a href="/admin/boards.html" class="active">Menu Boards</a></li>
+      <li><button type="button" data-signout>Log Out</button></li>
+    </ul>
+  </nav>
+
+  <main class="admin-main">
+    <div class="admin-header-row">
+      <h1>Preview All Boards</h1>
+      <div class="admin-actions">
+        <a href="/admin/boards.html" class="btn btn-outline">Back to Boards</a>
+      </div>
+    </div>
+
+    <div id="loading" class="spinner-row"><span class="loading-spinner"></span></div>
+    <div class="preview-grid" id="preview-grid"></div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/admin/js/supabase-client.js"></script>
+  <script src="/admin/js/board-renderer.js"></script>
+  <script>
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    function formatDate(iso) {
+      if (!iso) return '';
+      const d = new Date(iso);
+      return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) +
+        ' ' + d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+    }
+
+    async function loadAllItems() {
+      const { data } = await sb.from('items').select('*');
+      const itemsById = {};
+      (data || []).forEach((i) => { itemsById[i.id] = i; });
+      return itemsById;
+    }
+
+    async function loadBoardContent(board) {
+      const { data: sectionRows } = await sb
+        .from('sections')
+        .select('*')
+        .eq('board_id', board.id)
+        .order('sort_order', { ascending: true });
+
+      const sections = [];
+      for (const s of (sectionRows || [])) {
+        const { data: siRows } = await sb
+          .from('section_items')
+          .select('*')
+          .eq('section_id', s.id)
+          .order('sort_order', { ascending: true });
+        sections.push({ ...s, items: siRows || [] });
+      }
+
+      const { data: boardImages } = await sb
+        .from('board_images')
+        .select('*')
+        .eq('board_id', board.id)
+        .order('sort_order', { ascending: true });
+
+      return { sections, boardImages: boardImages || [] };
+    }
+
+    async function renderAll() {
+      const { data: boards, error } = await sb.from('boards').select('*').order('name', { ascending: true });
+      const itemsById = await loadAllItems();
+
+      document.getElementById('loading').style.display = 'none';
+      const grid = document.getElementById('preview-grid');
+      grid.innerHTML = '';
+
+      if (error || !boards || boards.length === 0) {
+        grid.innerHTML = '<p style="font-family:Arial; opacity:0.5;">No boards to preview yet.</p>';
+        return;
+      }
+
+      for (const board of boards) {
+        const cell = document.createElement('div');
+        cell.className = 'preview-board';
+        cell.innerHTML = `
+          <canvas width="${board.width}" height="${board.height}"></canvas>
+          <div class="preview-board-label">
+            <div>
+              <h3>${escapeHtml(board.name)}</h3>
+              <p>Updated ${formatDate(board.updated_at)}</p>
+            </div>
+            <a href="/admin/board.html?id=${board.id}">Edit →</a>
+          </div>
+        `;
+        grid.appendChild(cell);
+
+        if (!board.template_key) continue;
+        const canvas = cell.querySelector('canvas');
+        const ctx = canvas.getContext('2d');
+        const { sections, boardImages } = await loadBoardContent(board);
+        await renderBoard(ctx, board.width, board.height, board.template_key, sections, itemsById, boardImages);
+      }
+    }
+
+    (async () => {
+      const session = await requireSession();
+      if (!session) return;
+      wireSignOutButtons();
+      renderAll();
+    })();
+  </script>
+</body>
+</html>

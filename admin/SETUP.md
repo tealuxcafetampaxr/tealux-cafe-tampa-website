@@ -41,6 +41,7 @@ Nothing extra needed — `/admin/` ships with the rest of the site on the next N
 - The "Self Serve Ramen" box is a one-off layout (`style: 'special'`): pick one catalog item for its price, set a free-toppings count and an ingredients string — the numbered steps are fixed copy in the renderer, not editable.
 - Adding a genuinely new screen design later means measuring its box coordinates and adding an entry to `BOARD_TEMPLATES` in `board-renderer.js` — there's no generic drag-and-drop layout builder.
 - **Board photos** are separate from the box template system: freeform user-uploaded images (`board_images` table), positioned/sized in the board's own pixel space (not the reference-template scale), dragged/resized via on-canvas handles in `/admin/board.html`. They render as their own layer strictly between the background and the box text layer, so a photo can never cover an item list — text always wins. Position/size persist to the DB immediately on drag-end, independent of the sections "Save" button.
+- **`/admin/preview.html`** ("Preview All" button on the boards dashboard) renders every board side by side in one page, reusing this same `renderBoard()` — a read-only view for eyeballing visual consistency across all screens before walking a PNG over to a TV. Each board links straight to its editor.
 
 ## Edit history and unsaved-changes warning
 
