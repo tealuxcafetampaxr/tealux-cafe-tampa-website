@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Item | Tealux Cafe Tampa Admin</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <link rel="stylesheet" href="/admin/css/admin.css" />
+  <style>
+    .item-layout { display: grid; grid-template-columns: 1fr 320px; gap: 24px; align-items: start; }
+    @media (max-width: 900px) { .item-layout { grid-template-columns: 1fr; } }
+    .gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 12px; margin-top: 14px; }
+    .gallery-item { position: relative; border-radius: 8px; overflow: hidden; border: 2px solid var(--border); aspect-ratio: 1; }
+    .gallery-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .gallery-item.is-primary { border-color: var(--gold); }
+    .gallery-item .gallery-badge { position: absolute; top: 4px; left: 4px; background: var(--gold); color: var(--black); font-size: 0.6rem; font-weight: 900; padding: 2px 6px; border-radius: 4px; }
+    .gallery-item .gallery-remove { position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,0.6); color: #fff; border: none; border-radius: 4px; width: 20px; height: 20px; cursor: pointer; font-size: 0.7rem; line-height: 1; }
+    .gallery-item .gallery-make-primary { position: absolute; bottom: 4px; left: 4px; right: 4px; background: rgba(0,0,0,0.65); color: #fff; border: none; border-radius: 4px; font-size: 0.6rem; padding: 3px; cursor: pointer; opacity: 0; transition: opacity 0.15s; }
+    .gallery-item:hover .gallery-make-primary { opacity: 1; }
+    .upload-tile { border: 2px dashed var(--border); border-radius: 8px; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 0.7rem; opacity: 0.5; text-align: center; }
+    .upload-tile:hover { opacity: 1; border-color: var(--black); }
+    .sidebar-section { border-top: 1px solid var(--border); padding-top: 18px; margin-top: 18px; }
+    .sidebar-section:first-child { border-top: none; padding-top: 0; margin-top: 0; }
+    .featured-toggle { display: flex; align-items: center; justify-content: space-between; }
+    .star-btn { background: none; border: none; font-size: 1.4rem; cursor: pointer; color: var(--border); }
+    .star-btn.active { color: var(--gold); }
+  </style>
+</head>
+<body>
+  <nav class="admin-nav">
+    <a href="/admin/items.html" class="admin-logo">
+      <span class="admin-logo-main">TEALUX CAFE</span>
+      <span class="admin-logo-sub">EMPLOYEE TOOLS</span>
+    </a>
+    <ul class="admin-nav-links">
+      <li><a href="/admin/items.html" class="active">Items</a></li>
+      <li><a href="/admin/boards.html">Menu Boards</a></li>
+      <li><button type="button" data-signout>Log Out</button></li>
+    </ul>
+  </nav>
+
+  <main class="admin-main">
+    <div class="admin-header-row">
+      <h1 id="page-title">New Item</h1>
+      <div class="admin-actions">
+        <button type="button" class="btn btn-danger" id="btn-delete" style="display:none;">Delete</button>
+        <a href="/admin/items.html" class="btn btn-outline">Cancel</a>
+        <button type="button" class="btn btn-crimson" id="btn-save">Save</button>
+      </div>
+    </div>
+
+    <div class="form-error" id="form-error"></div>
+
+    <div class="item-layout">
+      <div class="panel">
+        <div class="field">
+          <label for="f-name">Title</label>
+          <input type="text" id="f-name" placeholder="e.g. Brown Sugar Milk Tea" />
+        </div>
+        <div class="field">
+          <label for="f-description">Description</label>
+          <textarea id="f-description" placeholder="Short description shown on menu boards"></textarea>
+        </div>
+        <div class="field">
+          <label for="f-price">Price</label>
+          <input type="number" id="f-price" step="0.01" min="0" placeholder="0.00" />
+        </div>
+
+        <div class="sidebar-section">
+          <label>Photos</label>
+          <div class="gallery-grid" id="gallery-grid">
+            <div class="upload-tile" id="upload-tile">+ Add photo</div>
+          </div>
+          <input type="file" id="file-input" accept="image/*" multiple style="display:none;" />
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="sidebar-section">
+          <label for="f-status">Status</label>
+          <select id="f-status">
+            <option value="active">Active</option>
+            <option value="sold_out">Sold Out</option>
+          </select>
+        </div>
+        <div class="sidebar-section">
+          <label for="f-category">Category</label>
+          <input type="text" id="f-category" placeholder="e.g. Milk Tea, Fruit Tea, Dessert" />
+        </div>
+        <div class="sidebar-section">
+          <label for="f-tag">Tag</label>
+          <select id="f-tag">
+            <option value="none">None</option>
+            <option value="new">New</option>
+            <option value="best_seller">Best Seller</option>
+            <option value="limited">Limited</option>
+          </select>
+        </div>
+        <div class="sidebar-section">
+          <div class="featured-toggle">
+            <label style="margin:0;">Featured</label>
+            <button type="button" class="star-btn" id="btn-featured">★</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/admin/js/supabase-client.js"></script>
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const itemId = params.get('id');
+    let images = []; // { id, storage_url, sort_order, is_primary }
+    let featured = false;
+
+    function showError(message) {
+      const box = document.getElementById('form-error');
+      box.textContent = message;
+      box.classList.add('show');
+    }
+
+    function renderGallery() {
+      const grid = document.getElementById('gallery-grid');
+      grid.querySelectorAll('.gallery-item').forEach((el) => el.remove());
+      const uploadTile = document.getElementById('upload-tile');
+
+      images
+        .slice()
+        .sort((a, b) => a.sort_order - b.sort_order)
+        .forEach((img) => {
+          const div = document.createElement('div');
+          div.className = 'gallery-item' + (img.is_primary ? ' is-primary' : '');
+          div.innerHTML = `
+            ${img.is_primary ? '<span class="gallery-badge">Primary</span>' : ''}
+            <img src="${img.storage_url}" alt="" />
+            <button type="button" class="gallery-remove" title="Remove">✕</button>
+            ${!img.is_primary ? '<button type="button" class="gallery-make-primary">Make primary</button>' : ''}
+          `;
+          div.querySelector('.gallery-remove').addEventListener('click', () => removeImage(img.id));
+          const makePrimaryBtn = div.querySelector('.gallery-make-primary');
+          if (makePrimaryBtn) makePrimaryBtn.addEventListener('click', () => makePrimary(img.id));
+          grid.insertBefore(div, uploadTile);
+        });
+    }
+
+    function makePrimary(id) {
+      images = images.map((img) => ({ ...img, is_primary: img.id === id }));
+      renderGallery();
+    }
+
+    function removeImage(id) {
+      const wasPrimary = images.find((img) => img.id === id)?.is_primary;
+      images = images.filter((img) => img.id !== id);
+      if (wasPrimary && images.length > 0) images[0].is_primary = true;
+      renderGallery();
+    }
+
+    document.getElementById('upload-tile').addEventListener('click', () => {
+      document.getElementById('file-input').click();
+    });
+
+    document.getElementById('file-input').addEventListener('change', async (e) => {
+      const files = Array.from(e.target.files || []);
+      for (const file of files) {
+        const path = `${itemId || 'new'}/${Date.now()}-${file.name}`;
+        const { error: uploadError } = await sb.storage.from('item-images').upload(path, file);
+        if (uploadError) {
+          showError('Upload failed: ' + uploadError.message);
+          continue;
+        }
+        const { data: pub } = sb.storage.from('item-images').getPublicUrl(path);
+        images.push({
+          id: 'tmp-' + Date.now() + Math.random(),
+          storage_url: pub.publicUrl,
+          sort_order: images.length,
+          is_primary: images.length === 0,
+        });
+      }
+      renderGallery();
+      e.target.value = '';
+    });
+
+    document.getElementById('btn-featured').addEventListener('click', () => {
+      featured = !featured;
+      document.getElementById('btn-featured').classList.toggle('active', featured);
+    });
+
+    async function loadItem() {
+      if (!itemId) return;
+      const { data: item, error } = await sb.from('items').select('*').eq('id', itemId).single();
+      if (error || !item) {
+        showError('Item not found.');
+        return;
+      }
+      document.getElementById('page-title').textContent = item.name || 'Edit Item';
+      document.getElementById('f-name').value = item.name || '';
+      document.getElementById('f-description').value = item.description || '';
+      document.getElementById('f-price').value = item.price ?? '';
+      document.getElementById('f-status').value = item.status || 'active';
+      document.getElementById('f-category').value = item.category || '';
+      document.getElementById('f-tag').value = item.tag || 'none';
+      featured = !!item.featured;
+      document.getElementById('btn-featured').classList.toggle('active', featured);
+      document.getElementById('btn-delete').style.display = '';
+
+      const { data: imgRows } = await supabase
+        .from('item_images')
+        .select('*')
+        .eq('item_id', itemId)
+        .order('sort_order', { ascending: true });
+      images = imgRows || [];
+      renderGallery();
+    }
+
+    async function save() {
+      const payload = {
+        name: document.getElementById('f-name').value.trim(),
+        description: document.getElementById('f-description').value.trim(),
+        price: parseFloat(document.getElementById('f-price').value) || 0,
+        status: document.getElementById('f-status').value,
+        category: document.getElementById('f-category').value.trim(),
+        tag: document.getElementById('f-tag').value,
+        featured,
+      };
+      if (!payload.name) {
+        showError('Title is required.');
+        return;
+      }
+
+      let id = itemId;
+      if (id) {
+        const { error } = await sb.from('items').update(payload).eq('id', id);
+        if (error) { showError(error.message); return; }
+      } else {
+        const { data, error } = await sb.from('items').insert(payload).select().single();
+        if (error) { showError(error.message); return; }
+        id = data.id;
+      }
+
+      // Sync images: delete removed rows, insert new ones, update primary/sort.
+      const { data: existingRows } = await sb.from('item_images').select('id').eq('item_id', id);
+      const existingIds = new Set((existingRows || []).map((r) => r.id));
+      const keptIds = new Set(images.filter((img) => !String(img.id).startsWith('tmp-')).map((img) => img.id));
+      const toDelete = [...existingIds].filter((rowId) => !keptIds.has(rowId));
+      if (toDelete.length) {
+        await sb.from('item_images').delete().in('id', toDelete);
+      }
+
+      for (let i = 0; i < images.length; i++) {
+        const img = images[i];
+        if (String(img.id).startsWith('tmp-')) {
+          await sb.from('item_images').insert({
+            item_id: id,
+            storage_url: img.storage_url,
+            sort_order: i,
+            is_primary: img.is_primary,
+          });
+        } else {
+          await sb.from('item_images').update({
+            sort_order: i,
+            is_primary: img.is_primary,
+          }).eq('id', img.id);
+        }
+      }
+
+      window.location.href = '/admin/items.html';
+    }
+
+    document.getElementById('btn-save').addEventListener('click', save);
+
+    document.getElementById('btn-delete').addEventListener('click', async () => {
+      if (!itemId) return;
+      if (!confirm('Delete this item? This cannot be undone and will remove it from any menu boards.')) return;
+      const { error } = await sb.from('items').delete().eq('id', itemId);
+      if (error) { showError(error.message); return; }
+      window.location.href = '/admin/items.html';
+    });
+
+    (async () => {
+      const session = await requireSession();
+      if (!session) return;
+      wireSignOutButtons();
+      await loadItem();
+    })();
+  </script>
+</body>
+</html>

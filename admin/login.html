@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Employee Login | Tealux Cafe Tampa</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <link rel="stylesheet" href="/admin/css/admin.css" />
+</head>
+<body>
+  <div class="login-wrap">
+    <div class="panel login-panel">
+      <div class="login-header">
+        <span class="admin-logo-main">TEALUX CAFE</span>
+        <span class="admin-logo-sub">EMPLOYEE TOOLS</span>
+      </div>
+
+      <div class="login-tabs">
+        <button type="button" id="tab-password" class="active">Password</button>
+        <button type="button" id="tab-magic">Magic Link</button>
+      </div>
+
+      <div class="form-error" id="form-error"></div>
+
+      <form id="password-form">
+        <div class="field">
+          <label for="pw-email">Email</label>
+          <input type="email" id="pw-email" autocomplete="username" required />
+        </div>
+        <div class="field">
+          <label for="pw-password">Password</label>
+          <input type="password" id="pw-password" autocomplete="current-password" required />
+        </div>
+        <button type="submit" class="btn btn-dark" style="width:100%; justify-content:center;">
+          <span id="pw-submit-label">Log In</span>
+        </button>
+      </form>
+
+      <form id="magic-form" style="display:none;">
+        <div class="field">
+          <label for="magic-email">Email</label>
+          <input type="email" id="magic-email" autocomplete="username" required />
+        </div>
+        <button type="submit" class="btn btn-dark" style="width:100%; justify-content:center;">
+          <span id="magic-submit-label">Send Magic Link</span>
+        </button>
+      </form>
+
+      <p class="form-status" id="form-status"></p>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/admin/js/supabase-client.js"></script>
+  <script>
+    // If already logged in, skip straight to the tools.
+    sb.auth.getSession().then(({ data: { session } }) => {
+      if (session) window.location.href = '/admin/items.html';
+    });
+
+    const tabPassword = document.getElementById('tab-password');
+    const tabMagic = document.getElementById('tab-magic');
+    const passwordForm = document.getElementById('password-form');
+    const magicForm = document.getElementById('magic-form');
+    const errorBox = document.getElementById('form-error');
+    const statusBox = document.getElementById('form-status');
+
+    function showError(message) {
+      errorBox.textContent = message;
+      errorBox.classList.add('show');
+    }
+    function clearError() {
+      errorBox.textContent = '';
+      errorBox.classList.remove('show');
+    }
+
+    tabPassword.addEventListener('click', () => {
+      tabPassword.classList.add('active');
+      tabMagic.classList.remove('active');
+      passwordForm.style.display = '';
+      magicForm.style.display = 'none';
+      clearError();
+      statusBox.textContent = '';
+    });
+    tabMagic.addEventListener('click', () => {
+      tabMagic.classList.add('active');
+      tabPassword.classList.remove('active');
+      magicForm.style.display = '';
+      passwordForm.style.display = 'none';
+      clearError();
+      statusBox.textContent = '';
+    });
+
+    passwordForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      clearError();
+      const email = document.getElementById('pw-email').value.trim();
+      const password = document.getElementById('pw-password').value;
+      const label = document.getElementById('pw-submit-label');
+      label.innerHTML = '<span class="loading-spinner"></span>';
+
+      const { error } = await sb.auth.signInWithPassword({ email, password });
+
+      label.textContent = 'Log In';
+      if (error) {
+        showError(error.message);
+        return;
+      }
+      window.location.href = '/admin/items.html';
+    });
+
+    magicForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      clearError();
+      const email = document.getElementById('magic-email').value.trim();
+      const label = document.getElementById('magic-submit-label');
+      label.innerHTML = '<span class="loading-spinner"></span>';
+
+      const { error } = await sb.auth.signInWithOtp({
+        email,
+        options: { emailRedirectTo: window.location.origin + '/admin/items.html' },
+      });
+
+      label.textContent = 'Send Magic Link';
+      if (error) {
+        showError(error.message);
+        return;
+      }
+      statusBox.textContent = 'Check your email for a login link.';
+    });
+  </script>
+</body>
+</html>

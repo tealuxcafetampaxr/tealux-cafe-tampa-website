@@ -1,0 +1,7 @@
+.env
+.DS_Store
+Thumbs.db
+
+# Source assets — large files not needed at runtime (not served, not deployed)
+menu-source/
+templates/examples/

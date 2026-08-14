@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Board Editor | Tealux Cafe Tampa Admin</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <link rel="stylesheet" href="/admin/css/admin.css" />
+  <style>
+    .editor-layout { display: grid; grid-template-columns: 380px 1fr; gap: 24px; align-items: start; }
+    @media (max-width: 1000px) { .editor-layout { grid-template-columns: 1fr; } }
+
+    .section-card { border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 14px; }
+    .section-card-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; gap: 8px; }
+    .section-card-head h3 { font-size: 0.95rem; text-transform: uppercase; letter-spacing: -0.2px; }
+    .section-card-head .box-tag { font-family: 'Arial', sans-serif; font-size: 0.65rem; opacity: 0.4; text-transform: none; }
+
+    .section-item-row { display: grid; grid-template-columns: 1fr auto auto auto; align-items: center; gap: 8px; padding: 7px 0; font-family: 'Arial', sans-serif; font-size: 0.85rem; border-bottom: 1px solid var(--border); }
+    .section-item-row:last-child { border-bottom: none; }
+    .section-item-row input[type=text] { font-size: 0.72rem; padding: 6px 8px; }
+    .section-item-row .reorder-btn { background: none; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; width: 26px; height: 26px; font-size: 0.7rem; }
+    .section-item-row .remove-btn { background: none; border: none; color: var(--danger); cursor: pointer; font-size: 0.9rem; }
+
+    .add-item-select { margin-top: 10px; display: flex; gap: 8px; }
+    .add-item-select select { flex: 1; }
+
+    .ramen-fields .field { margin-bottom: 14px; }
+
+    #board-canvas { max-width: 100%; height: auto; background: #fff; border: 1px solid var(--border); border-radius: 8px; }
+    .canvas-wrap { position: sticky; top: 90px; text-align: center; }
+    .canvas-note { font-family: 'Arial', sans-serif; font-size: 0.75rem; opacity: 0.5; margin-top: 10px; }
+    .template-badge { display: inline-block; background: var(--black); color: var(--white); font-size: 0.65rem; font-weight: 700; padding: 4px 12px; border-radius: 50px; letter-spacing: 0.5px; margin-bottom: 16px; }
+  </style>
+</head>
+<body>
+  <nav class="admin-nav">
+    <a href="/admin/items.html" class="admin-logo">
+      <span class="admin-logo-main">TEALUX CAFE</span>
+      <span class="admin-logo-sub">EMPLOYEE TOOLS</span>
+    </a>
+    <ul class="admin-nav-links">
+      <li><a href="/admin/items.html">Items</a></li>
+      <li><a href="/admin/boards.html" class="active">Menu Boards</a></li>
+      <li><button type="button" data-signout>Log Out</button></li>
+    </ul>
+  </nav>
+
+  <main class="admin-main">
+    <div class="admin-header-row">
+      <h1 id="page-title">Board Editor</h1>
+      <div class="admin-actions">
+        <a href="/admin/boards.html" class="btn btn-outline">Back to Boards</a>
+        <button type="button" class="btn btn-outline" id="btn-save">Save</button>
+        <button type="button" class="btn btn-crimson" id="btn-export">Download PNG</button>
+      </div>
+    </div>
+
+    <div class="form-error" id="form-error"></div>
+
+    <div class="editor-layout">
+      <div>
+        <span class="template-badge" id="template-badge"></span>
+        <div id="sections-list"></div>
+      </div>
+
+      <div class="canvas-wrap">
+        <canvas id="board-canvas" width="1920" height="1080"></canvas>
+        <p class="canvas-note">Live preview of the real board design — background and headers are fixed; only the item lists are editable here.</p>
+      </div>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/admin/js/supabase-client.js"></script>
+  <script src="/admin/js/board-renderer.js"></script>
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const boardId = params.get('id');
+    let board = null;
+    let allItems = [];
+    let itemsById = {};
+    let sections = []; // { id, box_key, name, style, extra, items: [{id, item_id, group_label, sort_order}] }
+
+    const BOX_LABELS = {
+      fruit_teas: 'Fruit Teas', milk_tea: 'Milk Tea',
+      vietnamese_coffee: 'Vietnamese Iced Coffee', smoothies: 'Smoothies',
+      street_food: 'Street Food', breakfast_bakery: 'Breakfast & Bakery',
+      cakes_desserts: 'Cakes & Desserts', self_serve_ramen: 'Self Serve Ramen',
+    };
+
+    function showError(message) {
+      const box = document.getElementById('form-error');
+      box.textContent = message;
+      box.classList.add('show');
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    function money(n) { return '$' + Number(n || 0).toFixed(2); }
+
+    async function loadItems() {
+      const { data } = await sb.from('items').select('*').order('name', { ascending: true });
+      allItems = data || [];
+      itemsById = {};
+      allItems.forEach((i) => { itemsById[i.id] = i; });
+    }
+
+    async function ensureSectionsForTemplate(templateKey) {
+      const template = BOARD_TEMPLATES[templateKey];
+      if (!template) return;
+      const { data: existing } = await sb.from('sections').select('*').eq('board_id', boardId);
+      const existingBoxKeys = new Set((existing || []).map((s) => s.box_key));
+      const missing = template.boxes.filter((b) => !existingBoxKeys.has(b.key));
+      for (const b of missing) {
+        await sb.from('sections').insert({
+          board_id: boardId,
+          box_key: b.key,
+          name: BOX_LABELS[b.key] || b.key,
+          style: b.style === 'special' ? 'special' : 'list',
+        });
+      }
+    }
+
+    async function loadBoard() {
+      const { data: b, error } = await sb.from('boards').select('*').eq('id', boardId).single();
+      if (error || !b) {
+        showError('Board not found.');
+        return;
+      }
+      board = b;
+      document.getElementById('page-title').textContent = board.name;
+      document.getElementById('template-badge').textContent = (board.template_key || 'no template').toUpperCase();
+
+      if (board.template_key) {
+        await ensureSectionsForTemplate(board.template_key);
+      }
+
+      const { data: sectionRows } = await sb
+        .from('sections')
+        .select('*')
+        .eq('board_id', boardId)
+        .order('sort_order', { ascending: true });
+
+      sections = [];
+      for (const s of (sectionRows || [])) {
+        const { data: siRows } = await sb
+          .from('section_items')
+          .select('*')
+          .eq('section_id', s.id)
+          .order('sort_order', { ascending: true });
+        sections.push({ ...s, items: siRows || [] });
+      }
+    }
+
+    function renderListSectionCard(section) {
+      const card = document.createElement('div');
+      card.className = 'section-card';
+
+      const itemRows = section.items.map((si, idx) => {
+        const item = itemsById[si.item_id];
+        return `
+          <div class="section-item-row" data-si-id="${si.id}">
+            <div>
+              <div>${item ? escapeHtml(item.name) + ' — ' + money(item.price) : '(deleted item)'}</div>
+              <input type="text" data-group-label placeholder="Group label (optional, e.g. Signature Blends)" value="${escapeHtml(si.group_label || '')}" />
+            </div>
+            <button type="button" class="reorder-btn" data-move="up" ${idx === 0 ? 'disabled' : ''}>↑</button>
+            <button type="button" class="reorder-btn" data-move="down" ${idx === section.items.length - 1 ? 'disabled' : ''}>↓</button>
+            <button type="button" class="remove-btn" data-remove>✕</button>
+          </div>
+        `;
+      }).join('');
+
+      const availableItems = allItems.filter((i) => !section.items.some((si) => si.item_id === i.id));
+      const options = availableItems.map((i) => `<option value="${i.id}">${escapeHtml(i.name)}</option>`).join('');
+
+      card.innerHTML = `
+        <div class="section-card-head">
+          <h3>${escapeHtml(BOX_LABELS[section.box_key] || section.name)} <span class="box-tag">${section.box_key}</span></h3>
+        </div>
+        <div data-item-rows>${itemRows || '<p style="font-family:Arial; font-size:0.8rem; opacity:0.5;">No items yet.</p>'}</div>
+        <div class="add-item-select">
+          <select data-add-item><option value="">Add item…</option>${options}</select>
+        </div>
+      `;
+
+      card.querySelectorAll('[data-si-id]').forEach((row) => {
+        const siId = row.dataset.siId;
+        const si = section.items.find((x) => String(x.id) === siId);
+        row.querySelector('[data-group-label]').addEventListener('input', (e) => {
+          si.group_label = e.target.value;
+        });
+        row.querySelector('[data-remove]').addEventListener('click', () => {
+          section.items = section.items.filter((x) => String(x.id) !== siId);
+          renderSections();
+          drawPreview();
+        });
+        row.querySelectorAll('[data-move]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const i = section.items.findIndex((x) => String(x.id) === siId);
+            const dir = btn.dataset.move === 'up' ? -1 : 1;
+            const j = i + dir;
+            if (j < 0 || j >= section.items.length) return;
+            [section.items[i], section.items[j]] = [section.items[j], section.items[i]];
+            renderSections();
+            drawPreview();
+          });
+        });
+      });
+
+      card.querySelector('[data-add-item]').addEventListener('change', (e) => {
+        const itemId = e.target.value;
+        if (!itemId) return;
+        section.items.push({
+          id: 'tmp-' + Date.now() + Math.random(),
+          item_id: itemId,
+          group_label: '',
+          sort_order: section.items.length,
+        });
+        renderSections();
+        drawPreview();
+      });
+
+      return card;
+    }
+
+    function renderRamenSectionCard(section) {
+      const card = document.createElement('div');
+      card.className = 'section-card';
+      const extra = section.extra || {};
+      const currentItem = extra.price_item_id ? itemsById[extra.price_item_id] : null;
+      const options = allItems.map((i) => `<option value="${i.id}" ${extra.price_item_id === i.id ? 'selected' : ''}>${escapeHtml(i.name)} — ${money(i.price)}</option>`).join('');
+
+      card.innerHTML = `
+        <div class="section-card-head">
+          <h3>${escapeHtml(BOX_LABELS[section.box_key])} <span class="box-tag">${section.box_key} · special</span></h3>
+        </div>
+        <div class="ramen-fields">
+          <div class="field">
+            <label>Priced item (its price is shown on the board)</label>
+            <select data-ramen-item><option value="">— none —</option>${options}</select>
+          </div>
+          <div class="field">
+            <label>Free toppings count</label>
+            <input type="number" min="0" data-ramen-toppings value="${extra.free_toppings_count || 0}" />
+          </div>
+          <div class="field">
+            <label>Ingredients (shown at bottom of box)</label>
+            <input type="text" data-ramen-ingredients placeholder="Egg • Rice Cake • Kimchi • Dumpling • Spam" value="${escapeHtml(extra.ingredients || '')}" />
+          </div>
+        </div>
+      `;
+
+      card.querySelector('[data-ramen-item]').addEventListener('change', (e) => {
+        section.extra = { ...section.extra, price_item_id: e.target.value || null };
+        drawPreview();
+      });
+      card.querySelector('[data-ramen-toppings]').addEventListener('input', (e) => {
+        section.extra = { ...section.extra, free_toppings_count: parseInt(e.target.value, 10) || 0 };
+        drawPreview();
+      });
+      card.querySelector('[data-ramen-ingredients]').addEventListener('input', (e) => {
+        section.extra = { ...section.extra, ingredients: e.target.value };
+        drawPreview();
+      });
+
+      return card;
+    }
+
+    function renderSections() {
+      const list = document.getElementById('sections-list');
+      list.innerHTML = '';
+      sections.forEach((section) => {
+        const card = section.style === 'special'
+          ? renderRamenSectionCard(section)
+          : renderListSectionCard(section);
+        list.appendChild(card);
+      });
+    }
+
+    async function drawPreview() {
+      const canvas = document.getElementById('board-canvas');
+      const width = board?.width || 1920;
+      const height = board?.height || 1080;
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (!board?.template_key) return;
+      await renderBoard(ctx, width, height, board.template_key, sections, itemsById);
+    }
+
+    async function saveBoard() {
+      // Sync sections (all pre-created by ensureSectionsForTemplate; just update style-specific fields)
+      for (const section of sections) {
+        if (section.style === 'special') {
+          await sb.from('sections').update({ extra: section.extra || {} }).eq('id', section.id);
+        }
+
+        const { data: existingSI } = await sb.from('section_items').select('id').eq('section_id', section.id);
+        const existingSIIds = new Set((existingSI || []).map((r) => r.id));
+        const keptSIIds = new Set(section.items.filter((si) => !String(si.id).startsWith('tmp-')).map((si) => si.id));
+        const siToDelete = [...existingSIIds].filter((rowId) => !keptSIIds.has(rowId));
+        if (siToDelete.length) {
+          await sb.from('section_items').delete().in('id', siToDelete);
+        }
+
+        for (let j = 0; j < section.items.length; j++) {
+          const si = section.items[j];
+          if (String(si.id).startsWith('tmp-')) {
+            await sb.from('section_items').insert({
+              section_id: section.id,
+              item_id: si.item_id,
+              group_label: si.group_label || null,
+              sort_order: j,
+            });
+          } else {
+            await sb.from('section_items').update({
+              group_label: si.group_label || null,
+              sort_order: j,
+            }).eq('id', si.id);
+          }
+        }
+      }
+
+      await sb.from('boards').update({}).eq('id', boardId); // touch updated_at
+      await loadBoard();
+      renderSections();
+      drawPreview();
+    }
+
+    document.getElementById('btn-save').addEventListener('click', async () => {
+      await saveBoard();
+    });
+
+    document.getElementById('btn-export').addEventListener('click', () => {
+      const canvas = document.getElementById('board-canvas');
+      const link = document.createElement('a');
+      const name = (board?.name || 'board').replace(/[^a-z0-9]+/gi, '-').toLowerCase();
+      link.download = `${name}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    });
+
+    (async () => {
+      const session = await requireSession();
+      if (!session) return;
+      wireSignOutButtons();
+
+      if (!boardId) {
+        showError('No board selected.');
+        return;
+      }
+
+      await loadItems();
+      await loadBoard();
+      renderSections();
+      await drawPreview();
+    })();
+  </script>
+</body>
+</html>

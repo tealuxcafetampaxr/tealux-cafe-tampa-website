@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Items | Tealux Cafe Tampa Admin</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <link rel="stylesheet" href="/admin/css/admin.css" />
+</head>
+<body>
+  <nav class="admin-nav">
+    <a href="/admin/items.html" class="admin-logo">
+      <span class="admin-logo-main">TEALUX CAFE</span>
+      <span class="admin-logo-sub">EMPLOYEE TOOLS</span>
+    </a>
+    <ul class="admin-nav-links">
+      <li><a href="/admin/items.html" class="active">Items</a></li>
+      <li><a href="/admin/boards.html">Menu Boards</a></li>
+      <li><button type="button" data-signout>Log Out</button></li>
+    </ul>
+  </nav>
+
+  <main class="admin-main">
+    <div class="admin-header-row">
+      <h1>Item Catalog</h1>
+      <div class="admin-actions">
+        <button type="button" class="btn btn-outline" id="btn-duplicate" disabled>Duplicate</button>
+        <a href="/admin/item.html" class="btn btn-crimson">+ Add Item</a>
+      </div>
+    </div>
+
+    <div class="panel" style="padding:0;">
+      <div id="loading" class="spinner-row"><span class="loading-spinner"></span></div>
+      <div class="table-wrap" style="display:none;" id="table-wrap">
+        <table class="item-table">
+          <thead>
+            <tr>
+              <th style="width:36px;"></th>
+              <th>Item</th>
+              <th>Category</th>
+              <th>Price</th>
+              <th>Status</th>
+              <th>Tag</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="item-rows"></tbody>
+        </table>
+      </div>
+      <div class="empty-state" id="empty-state" style="display:none;">
+        <p>No items yet. Add your first menu item to get started.</p>
+      </div>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/admin/js/supabase-client.js"></script>
+  <script>
+    let items = [];
+    let selectedId = null;
+
+    function money(n) {
+      return '$' + Number(n || 0).toFixed(2);
+    }
+
+    function tagLabel(tag) {
+      return { none: '', new: 'New', best_seller: 'Best Seller', limited: 'Limited' }[tag] || '';
+    }
+
+    function renderRows() {
+      const tbody = document.getElementById('item-rows');
+      tbody.innerHTML = '';
+      items.forEach((item) => {
+        const tr = document.createElement('tr');
+        tr.dataset.id = item.id;
+
+        const thumbCell = item.primary_image_url
+          ? `<img class="item-thumb" src="${item.primary_image_url}" alt="" />`
+          : `<div class="item-thumb-placeholder">—</div>`;
+
+        tr.innerHTML = `
+          <td onclick="event.stopPropagation()"><input type="radio" name="select-item" data-select /></td>
+          <td>${thumbCell}</td>
+          <td>
+            <strong>${escapeHtml(item.name)}</strong>
+            ${item.featured ? ' <span class="badge badge-featured">★</span>' : ''}
+          </td>
+          <td>${escapeHtml(item.category || '—')}</td>
+          <td>${money(item.price)}</td>
+          <td><span class="badge badge-${item.status}">${item.status === 'active' ? 'Active' : 'Sold Out'}</span></td>
+          <td>${tagLabel(item.tag) ? `<span class="badge badge-tag">${tagLabel(item.tag)}</span>` : ''}</td>
+        `;
+
+        tr.addEventListener('click', () => {
+          window.location.href = `/admin/item.html?id=${item.id}`;
+        });
+        const radio = tr.querySelector('[data-select]');
+        radio.addEventListener('click', (e) => {
+          e.stopPropagation();
+          selectedId = item.id;
+          document.getElementById('btn-duplicate').disabled = false;
+        });
+
+        tbody.appendChild(tr);
+      });
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    async function loadItems() {
+      const { data: itemRows, error } = await supabase
+        .from('items')
+        .select('*')
+        .order('sort_order', { ascending: true });
+
+      if (error) {
+        console.error(error);
+        document.getElementById('loading').textContent = 'Failed to load items.';
+        return;
+      }
+
+      const { data: imageRows } = await supabase
+        .from('item_images')
+        .select('item_id, storage_url, is_primary')
+        .eq('is_primary', true);
+
+      const primaryByItem = {};
+      (imageRows || []).forEach((img) => { primaryByItem[img.item_id] = img.storage_url; });
+
+      items = (itemRows || []).map((it) => ({ ...it, primary_image_url: primaryByItem[it.id] || null }));
+
+      document.getElementById('loading').style.display = 'none';
+      if (items.length === 0) {
+        document.getElementById('empty-state').style.display = '';
+      } else {
+        document.getElementById('table-wrap').style.display = '';
+        renderRows();
+      }
+    }
+
+    document.getElementById('btn-duplicate').addEventListener('click', async () => {
+      if (!selectedId) return;
+      const source = items.find((i) => i.id === selectedId);
+      if (!source) return;
+
+      const { id, created_at, updated_at, primary_image_url, ...rest } = source;
+      rest.name = source.name + ' (Copy)';
+
+      const { data, error } = await sb.from('items').insert(rest).select().single();
+      if (error) {
+        alert('Could not duplicate item: ' + error.message);
+        return;
+      }
+      window.location.href = `/admin/item.html?id=${data.id}`;
+    });
+
+    (async () => {
+      const session = await requireSession();
+      if (!session) return;
+      wireSignOutButtons();
+      loadItems();
+    })();
+  </script>
+</body>
+</html>

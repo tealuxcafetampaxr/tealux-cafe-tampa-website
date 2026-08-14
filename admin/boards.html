@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Menu Boards | Tealux Cafe Tampa Admin</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <link rel="stylesheet" href="/admin/css/admin.css" />
+</head>
+<body>
+  <nav class="admin-nav">
+    <a href="/admin/items.html" class="admin-logo">
+      <span class="admin-logo-main">TEALUX CAFE</span>
+      <span class="admin-logo-sub">EMPLOYEE TOOLS</span>
+    </a>
+    <ul class="admin-nav-links">
+      <li><a href="/admin/items.html">Items</a></li>
+      <li><a href="/admin/boards.html" class="active">Menu Boards</a></li>
+      <li><button type="button" data-signout>Log Out</button></li>
+    </ul>
+  </nav>
+
+  <main class="admin-main">
+    <div class="admin-header-row">
+      <h1>Menu Boards</h1>
+    </div>
+
+    <div id="loading" class="spinner-row"><span class="loading-spinner"></span></div>
+
+    <div class="card-grid" id="board-grid" style="display:none;">
+      <button type="button" class="board-card board-card-new" id="btn-new-board">+ New Board</button>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/admin/js/supabase-client.js"></script>
+  <script>
+    function formatDate(iso) {
+      if (!iso) return '';
+      const d = new Date(iso);
+      return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) +
+        ' ' + d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+    }
+
+    const TEMPLATE_LABELS = { screen_1: 'Screen 1', screen_2: 'Screen 2', screen_3: 'Screen 3' };
+
+    async function loadBoards() {
+      const { data: boards, error } = await sb
+        .from('boards')
+        .select('*')
+        .order('updated_at', { ascending: false });
+
+      document.getElementById('loading').style.display = 'none';
+      const grid = document.getElementById('board-grid');
+      grid.style.display = '';
+
+      if (error) {
+        console.error(error);
+        return;
+      }
+
+      (boards || []).forEach((board) => {
+        const a = document.createElement('a');
+        a.className = 'board-card';
+        a.href = `/admin/board.html?id=${board.id}`;
+        const thumbLabel = TEMPLATE_LABELS[board.template_key] || `${board.width}×${board.height}`;
+        a.innerHTML = `
+          <div class="board-card-thumb">${thumbLabel}</div>
+          <div class="board-card-body">
+            <h3>${escapeHtml(board.name)}</h3>
+            <p>Updated ${formatDate(board.updated_at)}</p>
+          </div>
+        `;
+        grid.insertBefore(a, document.getElementById('btn-new-board'));
+      });
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    document.getElementById('btn-new-board').addEventListener('click', async () => {
+      const name = prompt('Board name (e.g. "Screen 4"):');
+      if (!name) return;
+      const templateKey = prompt('Template to use — type exactly: screen_1, screen_2, or screen_3');
+      if (!['screen_1', 'screen_2', 'screen_3'].includes(templateKey)) {
+        alert('Must be screen_1, screen_2, or screen_3.');
+        return;
+      }
+      const { data, error } = await sb
+        .from('boards')
+        .insert({ name, width: 1920, height: 1080, theme: {}, template_key: templateKey })
+        .select()
+        .single();
+      if (error) {
+        alert('Could not create board: ' + error.message);
+        return;
+      }
+      window.location.href = `/admin/board.html?id=${data.id}`;
+    });
+
+    (async () => {
+      const session = await requireSession();
+      if (!session) return;
+      wireSignOutButtons();
+      loadBoards();
+    })();
+  </script>
+</body>
+</html>
