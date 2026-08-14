@@ -5,3 +5,6 @@ Thumbs.db
 # Source assets — large files not needed at runtime (not served, not deployed)
 menu-source/
 templates/examples/
+
+# Ad-hoc debugging screenshots dropped in during development
+snippets/

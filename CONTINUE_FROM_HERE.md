@@ -28,11 +28,23 @@ User wants photo placement to be freeform (upload anywhere, drag to move, handle
 
 This supersedes the earlier plan (`CONTINUE_FROM_HERE.md` used to say "add one fixed photo per box, matching `templates/examples/`") — that's no longer the approach; freeform is.
 
+## Click-through test in progress (2026-08-14) — Screen 3 looks great
+
+User tested Screen 3 with real data + uploaded board photos (street food bowl, breakfast bagel, ramen bowl) — layout, group-label dropdown, and photo placement all look right (see `snippets/Capture.PNG`). One bug found:
+
+- **"Download PNG" silently did nothing once a board photo was added.** Root cause: board photos load cross-origin from Supabase Storage; drawing a cross-origin image onto a canvas without `img.crossOrigin = 'anonymous'` taints the canvas, and `canvas.toDataURL()` (what the export button calls) throws `SecurityError` — with no try/catch around it, so the button just appeared to do nothing. Fixed in `board-renderer.js`'s `loadImage()` (Supabase's public buckets already send the needed CORS header, so this is safe). Also wrapped the export click handler in `board.html` in a try/catch that now shows an `alert()` instead of failing silently, in case this ever recurs. **Not yet committed/pushed or re-tested.**
+
+## Feature added 2026-08-14 — per-section row spacing
+
+User asked for a way to fill leftover vertical space in a sparse box (the renderer only ever shrank font to prevent overflow; it never stretched to fill). Added a manual "Row spacing" slider (0.85×–1.6×) per list-style section in the board editor, stored as `sections.extra.line_spacing` (no migration needed, `extra` was already jsonb). Threaded a `spacing` multiplier through `measureTotalHeight`/`pickFontSize`/`drawRowsColumn` in `board-renderer.js` — it scales the gap between rows only, not in-row font metrics. Also fixed `saveBoard()` in `board.html`, which previously only persisted `extra` for `style === 'special'` (ramen) sections — now persists it for all sections, since list sections need it too now. **Not yet committed/pushed or tested.**
+
 ## Not done yet — pick up here
 
-1. **Real click-through test, this time actually thorough** — pick up here. Log in, open each of the 3 boards, check every box's text position (not just milk_tea), try the new group-label dropdown, try uploading/dragging/resizing a board photo, export a PNG.
-2. **Item photos**: individual per-item photos (not board photos) still need uploading through `/admin/item.html`'s uploader — manual per-item task for Kha/Chao once they're using the tool day to day.
-3. **Commit and push** the bug fixes + freeform image feature — ask the user explicitly before doing this (per standing instructions).
+1. **Test the row-spacing slider** and confirm it visually does what's expected (stretches/tightens rows, never overflows the box).
+2. **Re-test "Download PNG"** on Screen 3 with the photos already placed, to confirm the crossOrigin fix actually resolves it.
+3. **Finish the click-through**: Screen 1 and Screen 2 haven't been checked yet with real data.
+4. **Item photos**: individual per-item photos (not board photos) still need uploading through `/admin/item.html`'s uploader — manual per-item task for Kha/Chao once they're using the tool day to day.
+5. **Commit and push** the PNG export fix + row-spacing feature — ask the user explicitly before doing this (per standing instructions).
 
 ## Quick orientation if resuming cold
 

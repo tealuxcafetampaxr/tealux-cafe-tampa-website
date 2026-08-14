@@ -26,6 +26,11 @@
 
     .ramen-fields .field { margin-bottom: 14px; }
 
+    .row-spacing-control { margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+    .row-spacing-control label { display: flex; justify-content: space-between; font-family: 'Arial', sans-serif; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 6px; }
+    .row-spacing-control input[type=range] { width: 100%; }
+    .row-spacing-hint { font-family: 'Arial', sans-serif; font-size: 0.7rem; opacity: 0.5; margin-top: 4px; }
+
     #board-canvas { display: block; max-width: 100%; height: auto; background: #fff; border: 1px solid var(--border); border-radius: 8px; }
     .canvas-wrap { position: sticky; top: 90px; text-align: center; }
     .canvas-note { font-family: 'Arial', sans-serif; font-size: 0.75rem; opacity: 0.5; margin-top: 10px; }
@@ -216,15 +221,29 @@
       const availableItems = allItems.filter((i) => !section.items.some((si) => si.item_id === i.id));
       const options = availableItems.map((i) => `<option value="${i.id}">${escapeHtml(i.name)}</option>`).join('');
 
+      const spacing = (section.extra && section.extra.line_spacing) || 1;
+
       card.innerHTML = `
         <div class="section-card-head">
           <h3>${escapeHtml(BOX_LABELS[section.box_key] || section.name)} <span class="box-tag">${section.box_key}</span></h3>
+        </div>
+        <div class="row-spacing-control">
+          <label>Row spacing <span data-spacing-value>${spacing.toFixed(2)}×</span></label>
+          <input type="range" data-row-spacing min="0.85" max="1.6" step="0.05" value="${spacing}" />
+          <p class="row-spacing-hint">Stretch rows apart to fill a sparse box, or tighten a crowded one.</p>
         </div>
         <div data-item-rows>${itemRows || '<p style="font-family:Arial; font-size:0.8rem; opacity:0.5;">No items yet.</p>'}</div>
         <div class="add-item-select">
           <select data-add-item><option value="">Add item…</option>${options}</select>
         </div>
       `;
+
+      card.querySelector('[data-row-spacing]').addEventListener('input', (e) => {
+        const value = parseFloat(e.target.value);
+        section.extra = { ...section.extra, line_spacing: value };
+        card.querySelector('[data-spacing-value]').textContent = value.toFixed(2) + '×';
+        drawPreview();
+      });
 
       card.querySelectorAll('[data-si-id]').forEach((row) => {
         const siId = row.dataset.siId;
@@ -513,9 +532,7 @@
     async function saveBoard() {
       // Sync sections (all pre-created by ensureSectionsForTemplate; just update style-specific fields)
       for (const section of sections) {
-        if (section.style === 'special') {
-          await sb.from('sections').update({ extra: section.extra || {} }).eq('id', section.id);
-        }
+        await sb.from('sections').update({ extra: section.extra || {} }).eq('id', section.id);
 
         const { data: existingSI } = await sb.from('section_items').select('id').eq('section_id', section.id);
         const existingSIIds = new Set((existingSI || []).map((r) => r.id));
@@ -555,10 +572,17 @@
 
     document.getElementById('btn-export').addEventListener('click', () => {
       const canvas = document.getElementById('board-canvas');
-      const link = document.createElement('a');
       const name = (board?.name || 'board').replace(/[^a-z0-9]+/gi, '-').toLowerCase();
+      let dataUrl;
+      try {
+        dataUrl = canvas.toDataURL('image/png');
+      } catch (e) {
+        alert('Could not export PNG — a photo on this board failed to load safely (' + e.message + '). Try re-uploading it.');
+        return;
+      }
+      const link = document.createElement('a');
       link.download = `${name}.png`;
-      link.href = canvas.toDataURL('image/png');
+      link.href = dataUrl;
       link.click();
     });
 

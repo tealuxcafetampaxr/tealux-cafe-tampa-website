@@ -61,6 +61,11 @@ function loadImage(src) {
   if (_imageCache[src]) return _imageCache[src];
   const p = new Promise((resolve, reject) => {
     const img = new Image();
+    // Board photos load cross-origin from Supabase Storage. Without this,
+    // drawing them onto the canvas taints it, and canvas.toDataURL() (the
+    // PNG export) throws a SecurityError. Supabase's public buckets send
+    // Access-Control-Allow-Origin, so this is safe.
+    img.crossOrigin = 'anonymous';
     img.onload = () => resolve(img);
     img.onerror = reject;
     img.src = src;
@@ -123,25 +128,28 @@ const FONT_STEPS = [19, 18, 17, 16, 15, 14, 13, 12, 11];
 const HEADING_LINE_FACTOR = 2.05;
 const ITEM_LINE_FACTOR = 1.62;
 
-function measureTotalHeight(rows, fontSize) {
+// spacing is a per-section multiplier (default 1) on the gap between rows —
+// lets an employee manually stretch a sparse box's items to fill more of
+// its height, or tighten a crowded one, independent of font size.
+function measureTotalHeight(rows, fontSize, spacing) {
   let h = 0;
   rows.forEach((row) => {
-    h += fontSize * (row.type === 'heading' ? HEADING_LINE_FACTOR : ITEM_LINE_FACTOR);
+    h += fontSize * (row.type === 'heading' ? HEADING_LINE_FACTOR : ITEM_LINE_FACTOR) * spacing;
   });
   return h;
 }
 
-function pickFontSize(rows, availableHeight) {
+function pickFontSize(rows, availableHeight, spacing) {
   for (const size of FONT_STEPS) {
-    if (measureTotalHeight(rows, size) <= availableHeight) return size;
+    if (measureTotalHeight(rows, size, spacing) <= availableHeight) return size;
   }
   return FONT_STEPS[FONT_STEPS.length - 1];
 }
 
-function drawRowsColumn(ctx, rows, fontSize, x, top, width, bottomLimit) {
+function drawRowsColumn(ctx, rows, fontSize, x, top, width, bottomLimit, spacing) {
   let y = top;
   for (const row of rows) {
-    const lineH = fontSize * (row.type === 'heading' ? HEADING_LINE_FACTOR : ITEM_LINE_FACTOR);
+    const lineH = fontSize * (row.type === 'heading' ? HEADING_LINE_FACTOR : ITEM_LINE_FACTOR) * spacing;
     if (y + lineH > bottomLimit + 2) break; // safety: never draw past the box
 
     if (row.type === 'heading') {
@@ -250,9 +258,11 @@ function roundRect(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
-function drawListBox(ctx, box, sectionItems, itemsById) {
-  const rows = buildRows(sectionItems, itemsById);
+function drawListBox(ctx, box, section, itemsById) {
+  const rows = buildRows(section.items || [], itemsById);
   if (rows.length === 0) return;
+
+  const spacing = (section.extra && section.extra.line_spacing) || 1;
 
   const contentTop = box.y + box.contentY;
   const contentBottom = box.y + box.h - BOX_PAD_BOTTOM;
@@ -260,24 +270,24 @@ function drawListBox(ctx, box, sectionItems, itemsById) {
   const innerX = box.x + BOX_PAD_X;
   const innerWidth = box.w - BOX_PAD_X * 2;
 
-  let fontSize = pickFontSize(rows, availableHeight);
+  let fontSize = pickFontSize(rows, availableHeight, spacing);
 
   // Fallback: if even the smallest font overflows, split into two columns.
-  if (measureTotalHeight(rows, fontSize) > availableHeight && box.w > 500) {
+  if (measureTotalHeight(rows, fontSize, spacing) > availableHeight && box.w > 500) {
     const mid = Math.ceil(rows.length / 2);
     const left = rows.slice(0, mid);
     const right = rows.slice(mid);
     const colGutter = 28;
     const colWidth = (innerWidth - colGutter) / 2;
-    const fsLeft = pickFontSize(left, availableHeight);
-    const fsRight = pickFontSize(right, availableHeight);
+    const fsLeft = pickFontSize(left, availableHeight, spacing);
+    const fsRight = pickFontSize(right, availableHeight, spacing);
     const fs = Math.min(fsLeft, fsRight);
-    drawRowsColumn(ctx, left, fs, innerX, contentTop, colWidth, contentBottom);
-    drawRowsColumn(ctx, right, fs, innerX + colWidth + colGutter, contentTop, colWidth, contentBottom);
+    drawRowsColumn(ctx, left, fs, innerX, contentTop, colWidth, contentBottom, spacing);
+    drawRowsColumn(ctx, right, fs, innerX + colWidth + colGutter, contentTop, colWidth, contentBottom, spacing);
     return;
   }
 
-  drawRowsColumn(ctx, rows, fontSize, innerX, contentTop, innerWidth, contentBottom);
+  drawRowsColumn(ctx, rows, fontSize, innerX, contentTop, innerWidth, contentBottom, spacing);
 }
 
 function drawRamenBox(ctx, box, section, itemsById) {
@@ -370,7 +380,7 @@ async function renderBoard(ctx, canvasWidth, canvasHeight, templateKey, sections
     if (box.style === 'special') {
       drawRamenBox(ctx, box, section, itemsById);
     } else {
-      drawListBox(ctx, box, section.items || [], itemsById);
+      drawListBox(ctx, box, section, itemsById);
     }
   });
 
