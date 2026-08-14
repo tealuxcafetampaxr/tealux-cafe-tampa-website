@@ -2,51 +2,46 @@
 
 Last worked on: 2026-08-14. Read this before doing anything else on the admin tool.
 
-## What's done and confirmed working
+## Status: deployed and fully click-through tested
 
-- **Repo**: `D:\Tealux Web` is `tealuxcafetampaxr/tealux-cafe-tampa-website`. The first version of the admin tool (scaffold, renderer, schema/migration/seed SQL, real menu data) was committed and pushed to `main` on 2026-08-14 (commit `431abe4`). It should be live at `tealuxcafetampa.com/admin/login.html` once Netlify finishes deploying.
-- **Supabase**: project live (bayaotnzbzhotfrupzhx.supabase.co, creds in `.env`, gitignored). Live DB has run, in order: `schema.sql` → `migration_002_templates.sql` → `seed_boards.sql` → `seed_items.sql` → `migration_003_board_images.sql` (2026-08-14, no errors). Tables, RLS, storage buckets (`item-images` + `board-images`), the 3 real boards (Screen 1/2/3) with their fixed sections, the full ~76-item catalog, and the `board_images` table all exist on the live DB now.
-- **Employee accounts**: one shared login exists (`tealuxcafetampaxr@gmail.com`). Kha and Chao both use it — no per-person accounts needed.
-- **`/admin/` scaffold**: login.html, items.html, item.html, boards.html, board.html all built.
-- **Real menu data**: `menu-source/extracted_items.json` (~76 items, corrected against the PPTX and `templates/examples/`), seeded into the live DB.
+The admin tool is live at `tealuxcafetampa.com/admin/login.html` (unlisted on purpose —
+no link from the public site; decided 2026-08-14, revisit only if Kha/Chao ask for a
+bookmark-free way in). All commits below are pushed to `main`.
 
-## Bugs found during first real usage (2026-08-14) and fixed — NOT yet committed
+## Confirmed working (real click-through, real data, live site)
 
-The user did the first real click-through and found several issues. All fixed in the working tree but still uncommitted:
+- Login/auth gate, items catalog (`items.html`, `item.html`) — infinite-loading bug fixed.
+- **All 3 screens** now have real data loaded and have been clicked through by the user —
+  no further layout issues reported (2026-08-14).
+- **Screen 3** specifically: item lists, group-label dropdown, board-photo upload/drag/resize,
+  and PNG export (1920×1080, correct resolution, photos render cleanly) all confirmed good
+  (`snippets/screen-3.png`).
+- Milk Tea box (Screen 1) text position — was rendering off the left edge, re-measured and fixed.
+- **Row-spacing slider** — user confirmed it works well (2026-08-14).
 
-1. **`items.html` and `item.html` were stuck on an infinite loading spinner.** Root cause: both called `supabase.from(...)` where `supabase` is just the CDN library namespace (has `.createClient` but no `.from`) — the actual client instance is `sb` (from `supabase-client.js`). This threw an uncaught promise rejection before the loading spinner was ever hidden. Fixed all 3 call sites (`items.html` ×2, `item.html` ×1) to use `sb`.
-2. **Milk Tea items rendered too far left, off the box.** The `milk_tea` box's coded left edge (`x: 1055`) was wrong — re-measured via PIL color-boundary detection on `templates/Screen_1.png` and confirmed the real cream-colored content area starts at `x: 1160` (the gap between 1055–1160 is a decorative graphic between the two Screen 1 boxes, not part of milk_tea's box). Top/bottom/right edges were already correct (that's why price placement looked fine). Fixed in `BOARD_TEMPLATES.screen_1` in `board-renderer.js`. **Only milk_tea was re-verified this precisely — the other 6 boxes have NOT been re-audited pixel-by-pixel; a quick automated cross-check was inconclusive (the page background is the same cream family as the box interiors in places, so simple color detection can't reliably tell them apart). If other boxes look off during testing, re-measure them the same way (PIL color-boundary scan, not eyeballing).**
-3. **Group label typos** (the per-item subheading like "Signature Blends" that prints on the actual board) — was a free-text input, so a typo both prints wrong on the board and fragments grouping (two near-identical labels = two headings instead of one). Changed to a dropdown of labels already used in that section, plus "+ New label…" to add one. Also fixed a related bug where editing this field never triggered a live-preview redraw.
+## If something looks off later
 
-## New feature built 2026-08-14, NOT yet run/tested — freeform board photos
+Only the milk_tea box's coordinates were rigorously re-verified pixel-by-pixel (the rest passed
+a visual click-through, not a precision re-measure). If a box's text ever looks misaligned,
+re-measure it via PIL color-boundary scan on the source PNG (see `board-renderer.js`
+`BOARD_TEMPLATES`) rather than eyeballing/guessing new coordinates.
 
-User wants photo placement to be freeform (upload anywhere, drag to move, handle to resize), not the originally-planned "one fixed photo per box." Built:
+## Ongoing manual task (not blocked on anything)
 
-- `supabase/migration_003_board_images.sql` — new `board_images` table (board_id, storage_url, x/y/w/h, sort_order) + new public `board-images` storage bucket + RLS. **Not run against the live DB yet.**
-- `admin/js/board-renderer.js` — added `drawBoardImages()`, called from `renderBoard()` between the background and the box-text layer, so photos can never cover item text. Also added an image cache (`_imageCache`) since drag/resize can trigger many redraws per second.
-- `admin/board.html` — new "Board Photos" panel (upload button, thumbnail list, delete), and a drag/resize overlay on the canvas (`#image-overlay`, `.image-handle`) using pointer events. Position/size persist to the DB immediately on drag-end (not gated behind the "Save" button, which only covers sections/items).
-
-This supersedes the earlier plan (`CONTINUE_FROM_HERE.md` used to say "add one fixed photo per box, matching `templates/examples/`") — that's no longer the approach; freeform is.
-
-## Click-through test in progress (2026-08-14) — Screen 3 looks great
-
-User tested Screen 3 with real data + uploaded board photos (street food bowl, breakfast bagel, ramen bowl) — layout, group-label dropdown, and photo placement all look right (see `snippets/Capture.PNG`). One bug found:
-
-- **"Download PNG" silently did nothing once a board photo was added.** Root cause: board photos load cross-origin from Supabase Storage; drawing a cross-origin image onto a canvas without `img.crossOrigin = 'anonymous'` taints the canvas, and `canvas.toDataURL()` (what the export button calls) throws `SecurityError` — with no try/catch around it, so the button just appeared to do nothing. Fixed in `board-renderer.js`'s `loadImage()` (Supabase's public buckets already send the needed CORS header, so this is safe). Also wrapped the export click handler in `board.html` in a try/catch that now shows an `alert()` instead of failing silently, in case this ever recurs. **Not yet committed/pushed or re-tested.**
-
-## Feature added 2026-08-14 — per-section row spacing
-
-User asked for a way to fill leftover vertical space in a sparse box (the renderer only ever shrank font to prevent overflow; it never stretched to fill). Added a manual "Row spacing" slider (0.85×–1.6×) per list-style section in the board editor, stored as `sections.extra.line_spacing` (no migration needed, `extra` was already jsonb). Threaded a `spacing` multiplier through `measureTotalHeight`/`pickFontSize`/`drawRowsColumn` in `board-renderer.js` — it scales the gap between rows only, not in-row font metrics. Also fixed `saveBoard()` in `board.html`, which previously only persisted `extra` for `style === 'special'` (ramen) sections — now persists it for all sections, since list sections need it too now. **Not yet committed/pushed or tested.**
-
-## Not done yet — pick up here
-
-1. **Test the row-spacing slider** and confirm it visually does what's expected (stretches/tightens rows, never overflows the box).
-2. **Re-test "Download PNG"** on Screen 3 with the photos already placed, to confirm the crossOrigin fix actually resolves it.
-3. **Finish the click-through**: Screen 1 and Screen 2 haven't been checked yet with real data.
-4. **Item photos**: individual per-item photos (not board photos) still need uploading through `/admin/item.html`'s uploader — manual per-item task for Kha/Chao once they're using the tool day to day.
-5. **Commit and push** the PNG export fix + row-spacing feature — ask the user explicitly before doing this (per standing instructions).
+- **Individual item photos** (distinct from board photos) still need uploading one-by-one
+  through `/admin/item.html`'s gallery uploader — that's just data entry for Kha/Chao as they
+  use the tool, not a build task.
 
 ## Quick orientation if resuming cold
 
-- Read `claude-code-prompt-tealux-menu-webapp.md` (original spec) and `admin/SETUP.md` (setup + how the renderer works) first.
-- The **section/box layout** is NOT freeform — it's 3 fixed-design PNGs with named content boxes at exact coordinates; don't reintroduce a generic drag-and-drop *layout* builder, that was explicitly rejected in favor of matching the real TV designs. **Photos are the one deliberate exception** — those are freeform (upload/drag/resize) per the 2026-08-14 decision above, layered so they never interfere with the fixed text layout.
+- Read `claude-code-prompt-tealux-menu-webapp.md` (original spec) and `admin/SETUP.md` (setup +
+  how the renderer works) first.
+- DB setup order: `schema.sql` → `migration_002_templates.sql` → `seed_boards.sql` →
+  `seed_items.sql` → `migration_003_board_images.sql`. All 5 have been run on the live DB.
+- The **section/box layout** is NOT freeform — it's 3 fixed-design PNGs with named content boxes
+  at exact coordinates. Don't reintroduce a generic drag-and-drop *layout* builder, that was
+  explicitly rejected in favor of matching the real TV designs. **Board photos are the one
+  deliberate exception** — freeform upload/drag/resize, rendered as their own layer strictly
+  between the background and the item-text layer so a photo can never cover text.
+- `admin/js/board-renderer.js` is the single source of truth for template box coordinates,
+  font-size auto-shrink, and now per-section row spacing (`sections.extra.line_spacing`).
