@@ -2,7 +2,7 @@
 
 Last worked on: 2026-08-15. Read this before doing anything else on the admin tool.
 
-## In progress: Screen 3 redesign (2026-08-15) — migration_006 run live, migration_007 NOT yet run, NOT yet click-tested live
+## In progress: Screen 3 redesign (2026-08-15) — both migrations run live, NOT yet click-tested live
 
 New background art dropped in twice today — the first version
 (`ChatGPT Image Aug 15, 2026, 10_54_51 AM.png`) was superseded within the same session by a second
@@ -33,11 +33,9 @@ Changed:
   errors.** Widened the `sections.style` check constraint to allow `'static'`, renamed the live
   `cakes_desserts` section to `desserts`, stripped the 8 rotating cake items out of it (stay in
   the catalog, unlinked from this board), inserted the new static `cakes` section.
-- `supabase/migration_007_ramen_ingredients_from_item.sql` — **new, NOT yet run on the live DB.**
-  Backfills the "Self Serve Ramen" item's Description from the old `extra.ingredients` value, then
-  drops that key from `extra`. **Must run before this deploys**, or the live board's toppings line
-  goes blank (old `extra.ingredients` still has the text, but the renderer stops reading it as of
-  this commit).
+- `supabase/migration_007_ramen_ingredients_from_item.sql` — **run on the live DB 2026-08-15, no
+  errors.** Backfilled the "Self Serve Ramen" item's Description from the old `extra.ingredients`
+  value, then dropped that key from `extra`.
 - `supabase/seed_boards.sql`, `supabase/seed_items.sql` — fresh installs seed `desserts`/`cakes`
   directly, and seed the ramen item's Description instead of `extra.ingredients`.
 - `admin/SETUP.md` — documents both migrations (steps 8–9) and the ramen-description behavior.
