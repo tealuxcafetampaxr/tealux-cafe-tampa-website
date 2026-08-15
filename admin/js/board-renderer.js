@@ -50,8 +50,13 @@ const BOARD_TEMPLATES = {
 const BOX_PAD_X = 26;
 const BOX_PAD_BOTTOM = 24;
 
+// A price of 0/null/unset never means "free" on this menu — it means no
+// price has been entered yet, so the board should show nothing rather than
+// a fake-looking "$0.00".
 function money(n) {
-  return '$' + Number(n || 0).toFixed(2);
+  const num = Number(n);
+  if (!num) return '';
+  return '$' + num.toFixed(2);
 }
 
 // Cached by src so drag/resize redraws (which can fire many times per

@@ -36,6 +36,10 @@
     .canvas-note { font-family: 'Arial', sans-serif; font-size: 0.75rem; opacity: 0.5; margin-top: 10px; }
     .template-badge { display: inline-block; background: var(--black); color: var(--white); font-size: 0.65rem; font-weight: 700; padding: 4px 12px; border-radius: 50px; letter-spacing: 0.5px; margin-bottom: 16px; }
 
+    .save-status { font-family: 'Arial', sans-serif; font-size: 0.8rem; font-weight: 700; }
+    .save-status.success { color: var(--success); }
+    .save-status.error { color: var(--danger); }
+
     .canvas-stage { position: relative; display: inline-block; max-width: 100%; }
     #image-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
     .image-handle { position: absolute; border: 2px dashed #C35A55; box-sizing: border-box; pointer-events: auto; cursor: move; touch-action: none; }
@@ -66,6 +70,7 @@
       <h1 id="page-title">Board Editor</h1>
       <div class="admin-actions">
         <a href="/admin/boards.html" class="btn btn-outline">Back to Boards</a>
+        <span id="save-status" class="save-status"></span>
         <button type="button" class="btn btn-outline" id="btn-save">Save</button>
         <button type="button" class="btn btn-crimson" id="btn-export">Download PNG</button>
       </div>
@@ -615,31 +620,35 @@
 
       // Sync sections (all pre-created by ensureSectionsForTemplate; just update style-specific fields)
       for (const section of sections) {
-        await sb.from('sections').update({ extra: section.extra || {} }).eq('id', section.id);
+        let res = await sb.from('sections').update({ extra: section.extra || {} }).eq('id', section.id);
+        if (res.error) throw new Error(res.error.message);
 
-        const { data: existingSI } = await sb.from('section_items').select('id').eq('section_id', section.id);
+        const { data: existingSI, error: fetchErr } = await sb.from('section_items').select('id').eq('section_id', section.id);
+        if (fetchErr) throw new Error(fetchErr.message);
         const existingSIIds = new Set((existingSI || []).map((r) => r.id));
         const keptSIIds = new Set(section.items.filter((si) => !String(si.id).startsWith('tmp-')).map((si) => si.id));
         const siToDelete = [...existingSIIds].filter((rowId) => !keptSIIds.has(rowId));
         if (siToDelete.length) {
-          await sb.from('section_items').delete().in('id', siToDelete);
+          res = await sb.from('section_items').delete().in('id', siToDelete);
+          if (res.error) throw new Error(res.error.message);
         }
 
         for (let j = 0; j < section.items.length; j++) {
           const si = section.items[j];
           if (String(si.id).startsWith('tmp-')) {
-            await sb.from('section_items').insert({
+            res = await sb.from('section_items').insert({
               section_id: section.id,
               item_id: si.item_id,
               group_label: si.group_label || null,
               sort_order: j,
             });
           } else {
-            await sb.from('section_items').update({
+            res = await sb.from('section_items').update({
               group_label: si.group_label || null,
               sort_order: j,
             }).eq('id', si.id);
           }
+          if (res.error) throw new Error(res.error.message);
         }
       }
 
@@ -654,8 +663,32 @@
       renderHistoryList('board-history-list', await loadEditHistory('board', boardId));
     }
 
+    let isSaving = false;
     document.getElementById('btn-save').addEventListener('click', async () => {
-      await saveBoard();
+      if (isSaving) return; // a rapid second click while the first save is still in flight
+                             // used to re-run the whole insert loop against the same
+                             // not-yet-reloaded `sections` state, duplicating every new item
+      isSaving = true;
+      const btn = document.getElementById('btn-save');
+      const status = document.getElementById('save-status');
+      btn.disabled = true;
+      btn.textContent = 'Saving…';
+      status.textContent = '';
+      status.className = 'save-status';
+      try {
+        await saveBoard();
+        status.textContent = 'Saved ✓';
+        status.className = 'save-status success';
+      } catch (e) {
+        status.textContent = 'Save failed — ' + e.message;
+        status.className = 'save-status error';
+      }
+      btn.disabled = false;
+      btn.textContent = 'Save';
+      isSaving = false;
+      setTimeout(() => {
+        if (!isSaving) status.textContent = '';
+      }, 4000);
     });
 
     document.getElementById('btn-export').addEventListener('click', () => {

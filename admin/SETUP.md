@@ -43,6 +43,19 @@ Nothing extra needed — `/admin/` ships with the rest of the site on the next N
 - **Board photos** are separate from the box template system: freeform user-uploaded images (`board_images` table), positioned/sized in the board's own pixel space (not the reference-template scale), dragged/resized via on-canvas handles in `/admin/board.html`. They render as their own layer strictly between the background and the box text layer, so a photo can never cover an item list — text always wins. Position/size persist to the DB immediately on drag-end, independent of the sections "Save" button.
 - **`/admin/preview.html`** ("Preview All" button on the boards dashboard) renders every board side by side in one page, reusing this same `renderBoard()` — a read-only view for eyeballing visual consistency across all screens before walking a PNG over to a TV. Each board links straight to its editor.
 
+## Items table: search/filter/sort and inline bulk edit
+
+`items.html` supports live search (name/description/category), category/status/tag filters, and
+sortable columns — all client-side, no extra Supabase calls (the catalog is small).
+
+Clicking **Edit** turns every currently-filtered row into editable cells (name, category, price,
+status, tag) for fast multi-item changes without opening each one individually. Search/filter/sort
+lock while editing on purpose — editing a filtered subset, then having the list re-filter out from
+under you, would be confusing. **Save Changes** only writes (and logs history for) rows that
+actually changed; **Cancel** discards everything in memory with no DB calls. The inline category
+dropdown only offers existing categories — adding a brand-new category still requires the fuller
+`item.html` editor.
+
 ## Edit history and unsaved-changes warning
 
 `item.html` and `board.html` both show a "Recent Changes" panel (last 90 days) and warn via the
