@@ -1,6 +1,41 @@
 # Continue From Here
 
-Last worked on: 2026-08-14. Read this before doing anything else on the admin tool.
+Last worked on: 2026-08-15. Read this before doing anything else on the admin tool.
+
+## In progress: Screen 3 redesign (2026-08-15) — committed and pushed, DB migration run, NOT yet click-tested live
+
+New background art dropped in (`templates/examples/ChatGPT Image Aug 15, 2026, 10_54_51 AM.png`,
+now copied to `templates/Screen_3.png`) with different box positions than the old design, plus a
+content change: the old single "Cakes & Desserts" box is now two side-by-side columns —
+"Desserts" (still a real editable item list: Tofu Dessert, Mango Shake, Korean Cheese Coin, Korea
+Ube Cheese Coin) and "Cakes" (cakes rotate daily, so instead of listing them it's now a fixed
+"please see cashier for today's specials" message — new box style `'static'`, no items, nothing
+to edit).
+
+Changed:
+- `admin/js/board-renderer.js` — all 5 screen_3 box coordinates re-measured (PIL color-boundary
+  scan) against the new background; `cakes_desserts` box replaced by `desserts` (list) + `cakes`
+  (new `static` style, draws `CAKES_STATIC_TEXT` centered/wrapped, no section data needed).
+- `admin/board.html` — `BOX_LABELS`, `ensureSectionsForTemplate`, `renderSections` (new
+  `renderStaticSectionCard`), `diffSections` all updated for the new box_keys and `static` style.
+- `supabase/migration_006_screen3_desserts_split.sql` — **run on the live DB 2026-08-15, no
+  errors.** Widened the `sections.style` check constraint to allow `'static'`, renamed the live
+  `cakes_desserts` section to `desserts` (keeps its existing section_items), stripped the 8
+  rotating cake items out of it (they stay in the catalog, just unlinked from this board), and
+  inserted the new static `cakes` section.
+- `supabase/seed_boards.sql`, `supabase/seed_items.sql` — updated so a *fresh* install seeds the
+  new `desserts`/`cakes` box_keys directly instead of the old `cakes_desserts`.
+- `admin/SETUP.md` — documents `migration_006` as step 8 in the run order.
+
+Coordinate accuracy was checked by rendering the real `board-renderer.js` against mock data in a
+browser (not against live data in the actual admin tool) — all 5 boxes lined up correctly against
+the new art. **Still needs a real click-through of Screen 3 in `board.html` with live data** to
+confirm nothing looks off in practice — nobody has done that yet.
+
+One known cosmetic issue, not yet addressed: the Desserts column is narrower than the old combined
+box (251px vs 720px), so "Korean Cheese Coin" and "Korea Ube Cheese Coin" truncate to "Korean
+Che…" on the rendered board. Flagged to the user 2026-08-15, no decision yet on whether to shorten
+those item names or leave it.
 
 ## Status: deployed, click-through tested, actively iterating
 
@@ -8,16 +43,21 @@ The admin tool is live at `tealuxcafetampa.com/admin/login.html` (unlisted on pu
 link from the public site; decided 2026-08-14, revisit only if Kha/Chao ask for a
 bookmark-free way in).
 
-Latest pushed commit: `df41401` — "Add inline bulk-edit mode to the items table". Everything is
-pushed and DB-side is fully set up (all 7 SQL files run, no errors), but the newest features
-(inactive status, edit history, unsaved-changes warning, Preview All page, inline bulk edit)
-have **not yet been click-tested in the browser** — see the two "Built but not yet
-browser-tested" sections below.
+Latest pushed commit: `97ee397` — "Fix board Save duplicating items, add save confirmation,
+blank out $0.00". Everything is pushed and DB-side is fully set up (all 7 SQL files run, no
+errors), but most of it (inactive status, edit history, unsaved-changes warning, Preview All
+page, inline bulk edit, the 3 fixes below) has **not yet been click-tested in the browser**.
 
-**Uncommitted local work as of now**: 3 bug fixes found during real usage (2026-08-14), see
-"Bugs found and fixed" below — not yet committed/pushed.
+**No uncommitted local work right now.**
 
-## Bugs found and fixed 2026-08-14 (real usage on board.html) — NOT yet committed
+**Outstanding data-cleanup task**: the pre-fix version of Save could duplicate items in
+`section_items` if Save was double-clicked (see bug #1 below) — this happened for real to the
+user before the fix landed. The fix stops it going forward but does NOT retroactively clean up
+any duplicate rows already created. Check whichever board(s) were being edited when this
+happened — if the same item appears twice in a box, that's a leftover duplicate `section_items`
+row that needs deleting in Supabase.
+
+## Bugs found and fixed 2026-08-14 (real usage on board.html)
 
 1. **Board Save duplicated items on the rendered board.** Root cause: `btn-save`'s click handler
    never disabled the button or guarded against re-entry, and `saveBoard()` never checked any
@@ -36,8 +76,6 @@ browser-tested" sections below.
    to the rendered board only; admin table views (`items.html`, `board.html`) still show "$0.00"
    deliberately, as a useful signal to the person editing that a price is still missing.
 
-**Not yet committed, pushed, or tested against the live site.**
-
 ## Confirmed working (real click-through, real data, live site)
 
 - Login/auth gate, items catalog — infinite-loading bug fixed.
@@ -52,7 +90,7 @@ Only the milk_tea box's coordinates were rigorously re-verified pixel-by-pixel (
 a visual click-through, not a precision re-measure). Re-measure via PIL color-boundary scan on
 the source PNG (see `board-renderer.js` `BOARD_TEMPLATES`) rather than eyeballing new coordinates.
 
-## Built but not yet browser-tested (pushed in commits `3b509ea`, `c044060`, `df41401`)
+## Built but not yet browser-tested (pushed in commits `3b509ea`, `c044060`, `df41401`, `97ee397`)
 
 - **Inactive item status** (`migration_004`) — excluded from board dropdowns and skipped by the
   renderer even if already linked to a board.

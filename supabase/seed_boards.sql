@@ -21,8 +21,9 @@ join (values
   ('screen_2', 'smoothies',         'Smoothies',                'list',    1),
   ('screen_3', 'street_food',       'Street Food',              'list',    0),
   ('screen_3', 'breakfast_bakery',  'Breakfast & Bakery',       'list',    1),
-  ('screen_3', 'cakes_desserts',    'Cakes & Desserts',         'list',    2),
-  ('screen_3', 'self_serve_ramen',  'Self Serve Ramen',         'special', 3)
+  ('screen_3', 'desserts',          'Desserts',                 'list',    2),
+  ('screen_3', 'cakes',             'Cakes',                    'static',  3),
+  ('screen_3', 'self_serve_ramen',  'Self Serve Ramen',         'special', 4)
 ) as v(template_key, box_key, name, style, sort_order)
   on v.template_key = b.template_key
 where not exists (

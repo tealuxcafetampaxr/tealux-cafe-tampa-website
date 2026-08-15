@@ -39,13 +39,18 @@ const BOARD_TEMPLATES = {
   screen_3: {
     image: '/templates/Screen_3.png',
     boxes: [
-      { key: 'street_food', x: 33, y: 113, w: 413, h: 729, contentY: 118, style: 'list' },
-      { key: 'breakfast_bakery', x: 464, y: 154, w: 720, h: 392, contentY: 77, style: 'list' },
-      { key: 'cakes_desserts', x: 464, y: 559, w: 720, h: 281, contentY: 75, style: 'list' },
-      { key: 'self_serve_ramen', x: 1203, y: 113, w: 437, h: 728, contentY: 118, style: 'special' },
+      { key: 'street_food', x: 48, y: 54, w: 406, h: 504, contentY: 106, style: 'list' },
+      { key: 'breakfast_bakery', x: 508, y: 192, w: 430, h: 360, contentY: 93, style: 'list' },
+      { key: 'desserts', x: 441, y: 570, w: 251, h: 263, contentY: 90, style: 'list' },
+      { key: 'cakes', x: 717, y: 570, w: 251, h: 263, contentY: 90, style: 'static' },
+      { key: 'self_serve_ramen', x: 1224, y: 54, w: 393, h: 736, contentY: 105, style: 'special' },
     ],
   },
 };
+
+// Cakes rotate daily, so instead of an editable item list this column is
+// always this fixed message pointing customers to the register.
+const CAKES_STATIC_TEXT = 'Please see cashier for today’s specials';
 
 const BOX_PAD_X = 26;
 const BOX_PAD_BOTTOM = 24;
@@ -298,6 +303,50 @@ function drawListBox(ctx, box, section, itemsById) {
   drawRowsColumn(ctx, rows, fontSize, innerX, contentTop, innerWidth, contentBottom, spacing);
 }
 
+// Wraps text to fit maxWidth, greedily packing words per line.
+function wrapText(ctx, text, maxWidth) {
+  const words = text.split(' ');
+  const lines = [];
+  let line = '';
+  words.forEach((word) => {
+    const candidate = line ? line + ' ' + word : word;
+    if (ctx.measureText(candidate).width > maxWidth && line) {
+      lines.push(line);
+      line = word;
+    } else {
+      line = candidate;
+    }
+  });
+  if (line) lines.push(line);
+  return lines;
+}
+
+// Static box: no items, just a fixed centered message (the "Cakes" column —
+// cakes rotate daily, so it points customers to the cashier instead of
+// listing a stale item list).
+function drawStaticBox(ctx, box) {
+  const innerX = box.x + BOX_PAD_X;
+  const innerWidth = box.w - BOX_PAD_X * 2;
+  const contentTop = box.y + box.contentY;
+  const contentBottom = box.y + box.h - BOX_PAD_BOTTOM;
+  const availableHeight = contentBottom - contentTop;
+
+  const fontSize = 22;
+  const lineHeight = fontSize * 1.35;
+  ctx.font = `700 ${fontSize}px Arial, sans-serif`;
+  const lines = wrapText(ctx, CAKES_STATIC_TEXT, innerWidth);
+  const totalHeight = lines.length * lineHeight;
+  let y = contentTop + Math.max(0, (availableHeight - totalHeight) / 2) + fontSize * 0.85;
+
+  ctx.textAlign = 'center';
+  ctx.fillStyle = COLOR_ACCENT;
+  lines.forEach((line) => {
+    ctx.fillText(line, innerX + innerWidth / 2, y);
+    y += lineHeight;
+  });
+  ctx.textAlign = 'left';
+}
+
 function drawRamenBox(ctx, box, section, itemsById) {
   const innerX = box.x + BOX_PAD_X;
   const innerWidth = box.w - BOX_PAD_X * 2;
@@ -383,6 +432,10 @@ async function renderBoard(ctx, canvasWidth, canvasHeight, templateKey, sections
   ctx.scale(scale, scale);
 
   template.boxes.forEach((box) => {
+    if (box.style === 'static') {
+      drawStaticBox(ctx, box);
+      return;
+    }
     const section = sectionByBox[box.key];
     if (!section) return;
     if (box.style === 'special') {

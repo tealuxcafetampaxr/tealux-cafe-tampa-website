@@ -152,6 +152,8 @@
           return;
         }
 
+        if (s.style === 'static') return; // fixed message, nothing to diff
+
         const pe = prev.extra || {};
         const ne = s.extra || {};
         const prevSpacing = pe.line_spacing || 1;
@@ -188,7 +190,7 @@
       fruit_teas: 'Fruit Teas', milk_tea: 'Milk Tea',
       vietnamese_coffee: 'Vietnamese Iced Coffee', smoothies: 'Smoothies',
       street_food: 'Street Food', breakfast_bakery: 'Breakfast & Bakery',
-      cakes_desserts: 'Cakes & Desserts', self_serve_ramen: 'Self Serve Ramen',
+      desserts: 'Desserts', cakes: 'Cakes', self_serve_ramen: 'Self Serve Ramen',
     };
 
     function showError(message) {
@@ -223,7 +225,7 @@
           board_id: boardId,
           box_key: b.key,
           name: BOX_LABELS[b.key] || b.key,
-          style: b.style === 'special' ? 'special' : 'list',
+          style: b.style === 'special' ? 'special' : b.style === 'static' ? 'static' : 'list',
         });
       }
     }
@@ -436,12 +438,29 @@
       return card;
     }
 
+    function renderStaticSectionCard(section) {
+      const card = document.createElement('div');
+      card.className = 'section-card';
+      card.innerHTML = `
+        <div class="section-card-head">
+          <h3>${escapeHtml(BOX_LABELS[section.box_key] || section.name)} <span class="box-tag">${section.box_key} · static</span></h3>
+        </div>
+        <p style="font-family:Arial; font-size:0.8rem; opacity:0.6;">
+          Fixed message, not an item list — cakes rotate daily, so this column always shows
+          “Please see cashier for today’s specials” on the board. Nothing to edit here.
+        </p>
+      `;
+      return card;
+    }
+
     function renderSections() {
       const list = document.getElementById('sections-list');
       list.innerHTML = '';
       sections.forEach((section) => {
         const card = section.style === 'special'
           ? renderRamenSectionCard(section)
+          : section.style === 'static'
+          ? renderStaticSectionCard(section)
           : renderListSectionCard(section);
         list.appendChild(card);
       });
