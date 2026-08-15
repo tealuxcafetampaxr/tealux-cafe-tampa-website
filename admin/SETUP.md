@@ -11,8 +11,9 @@ In the Supabase dashboard for this project (bayaotnzbzhotfrupzhx), in **SQL Edit
 6. `supabase/migration_004_inactive_status.sql` — adds `'inactive'` as a valid `items.status`, for items that should be excluded from every menu board.
 7. `supabase/migration_005_edit_history.sql` — adds the `edit_history` table, powering the "Recent Changes" panel on `item.html` and `board.html`.
 8. `supabase/migration_006_screen3_desserts_split.sql` — adds `'static'` as a valid `sections.style` and splits Screen 3's Cakes & Desserts box into an editable "Desserts" column and a fixed-message "Cakes" column. Safe to run before or after `seed_boards.sql`/`seed_items.sql`.
+9. `supabase/migration_007_ramen_ingredients_from_item.sql` — moves Self Serve Ramen's toppings list from `sections.extra.ingredients` into the priced item's Description field.
 
-If you're setting this up fresh (no `schema.sql` run yet), just run all eight in order.
+If you're setting this up fresh (no `schema.sql` run yet), just run all nine in order.
 
 ## 2. Create employee accounts
 
@@ -39,7 +40,7 @@ Nothing extra needed — `/admin/` ships with the rest of the site on the next N
 
 - Each item row auto-shrinks font size (and falls back to two columns) if the assigned items don't fit the box — this is what the prompt doc called "auto-compacting layout."
 - An item's `group_label` (set per-board, per-item in the editor) renders as a subheading like "SIGNATURE BLENDS" above it; consecutive items sharing a label are grouped under one subheading.
-- The "Self Serve Ramen" box is a one-off layout (`style: 'special'`): pick one catalog item for its price, set a free-toppings count and an ingredients string — the numbered steps are fixed copy in the renderer, not editable.
+- The "Self Serve Ramen" box is a one-off layout (`style: 'special'`): pick one catalog item for its price and set a free-toppings count — the numbered steps are fixed copy in the renderer, not editable. The toppings line at the bottom of the box is that item's Description field (edit it on the item's own page in `item.html`), not a separate field in the board editor.
 - Screen 3's "Cakes" box is `style: 'static'` — cakes rotate daily, so instead of an item list it always renders a fixed "please see cashier for today's specials" message (`CAKES_STATIC_TEXT` in `board-renderer.js`). Nothing to edit in the admin tool; its section card is just a note.
 - Adding a genuinely new screen design later means measuring its box coordinates and adding an entry to `BOARD_TEMPLATES` in `board-renderer.js` — there's no generic drag-and-drop layout builder.
 - **Board photos** are separate from the box template system: freeform user-uploaded images (`board_images` table), positioned/sized in the board's own pixel space (not the reference-template scale), dragged/resized via on-canvas handles in `/admin/board.html`. They render as their own layer strictly between the background and the box text layer, so a photo can never cover an item list — text always wins. Position/size persist to the DB immediately on drag-end, independent of the sections "Save" button.

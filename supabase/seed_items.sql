@@ -135,15 +135,16 @@ where not exists (
 drop table _seed_catalog;
 
 -- ── SELF SERVE RAMEN (special box: single priced item, not a list) ─────
+-- The item's Description doubles as the board's toppings list — no separate
+-- ramen-specific text field to keep in sync.
 insert into items (name, description, price, tag, category, sort_order)
-select 'Self Serve Ramen', '', 11.00, 'none', 'Self Serve Ramen', 0
+select 'Self Serve Ramen', 'Egg • Rice Cake • Kimchi • Dumpling • Spam', 11.00, 'none', 'Self Serve Ramen', 0
 where not exists (select 1 from items where name = 'Self Serve Ramen');
 
 update sections s
 set extra = jsonb_build_object(
   'price_item_id', i.id,
-  'free_toppings_count', 4,
-  'ingredients', 'Egg • Rice Cake • Kimchi • Dumpling • Spam'
+  'free_toppings_count', 4
 )
 from items i
 where s.box_key = 'self_serve_ramen' and i.name = 'Self Serve Ramen';

@@ -39,11 +39,11 @@ const BOARD_TEMPLATES = {
   screen_3: {
     image: '/templates/Screen_3.png',
     boxes: [
-      { key: 'street_food', x: 48, y: 54, w: 406, h: 504, contentY: 106, style: 'list' },
-      { key: 'breakfast_bakery', x: 508, y: 192, w: 430, h: 360, contentY: 93, style: 'list' },
-      { key: 'desserts', x: 441, y: 570, w: 251, h: 263, contentY: 90, style: 'list' },
-      { key: 'cakes', x: 717, y: 570, w: 251, h: 263, contentY: 90, style: 'static' },
-      { key: 'self_serve_ramen', x: 1224, y: 54, w: 393, h: 736, contentY: 105, style: 'special' },
+      { key: 'street_food', x: 49, y: 54, w: 405, h: 504, contentY: 106, style: 'list' },
+      { key: 'breakfast_bakery', x: 509, y: 192, w: 392, h: 346, contentY: 95, style: 'list' },
+      { key: 'desserts', x: 440, y: 584, w: 264, h: 252, contentY: 101, style: 'list' },
+      { key: 'cakes', x: 729, y: 584, w: 264, h: 252, contentY: 101, style: 'static' },
+      { key: 'self_serve_ramen', x: 1225, y: 54, w: 393, h: 501, contentY: 106, style: 'special' },
     ],
   },
 };
@@ -356,7 +356,9 @@ function drawRamenBox(ctx, box, section, itemsById) {
   const item = priceItemId ? itemsById[priceItemId] : null;
   const priceStr = (item && item.status !== 'inactive') ? money(item.price) : '—';
   const freeToppings = (section.extra && section.extra.free_toppings_count) || 0;
-  const ingredients = (section.extra && section.extra.ingredients) || '';
+  // Toppings list is just the priced item's Description field (edited via
+  // item.html) — no separate ramen-specific text field to keep in sync.
+  const ingredients = (item && item.description) || '';
 
   ctx.textAlign = 'left';
   ctx.fillStyle = COLOR_ACCENT;

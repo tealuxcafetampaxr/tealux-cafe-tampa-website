@@ -146,9 +146,6 @@
           if ((pe.free_toppings_count || 0) !== (ne.free_toppings_count || 0)) {
             lines.push(`${label}: free toppings count changed from ${pe.free_toppings_count || 0} to ${ne.free_toppings_count || 0}`);
           }
-          if ((pe.ingredients || '') !== (ne.ingredients || '')) {
-            lines.push(`${label}: ingredients updated`);
-          }
           return;
         }
 
@@ -399,6 +396,12 @@
         .map((i) => `<option value="${i.id}" ${extra.price_item_id === i.id ? 'selected' : ''}>${escapeHtml(i.name)} — ${money(i.price)}</option>`)
         .join('');
 
+      const ingredientsPreview = currentItem
+        ? (currentItem.description
+          ? escapeHtml(currentItem.description)
+          : '<em>No description set — toppings line will be blank on the board.</em>')
+        : '<em>Pick a priced item first.</em>';
+
       card.innerHTML = `
         <div class="section-card-head">
           <h3>${escapeHtml(BOX_LABELS[section.box_key])} <span class="box-tag">${section.box_key} · special</span></h3>
@@ -413,8 +416,12 @@
             <input type="number" min="0" data-ramen-toppings value="${extra.free_toppings_count || 0}" />
           </div>
           <div class="field">
-            <label>Ingredients (shown at bottom of box)</label>
-            <input type="text" data-ramen-ingredients placeholder="Egg • Rice Cake • Kimchi • Dumpling • Spam" value="${escapeHtml(extra.ingredients || '')}" />
+            <label>Toppings list (shown at bottom of box)</label>
+            <p style="font-family:Arial; font-size:0.8rem; opacity:0.7;" data-ramen-ingredients-preview>${ingredientsPreview}</p>
+            <p style="font-family:Arial; font-size:0.7rem; opacity:0.5;">
+              Pulled from the priced item's Description — edit it on
+              <a href="/admin/item.html?id=${currentItem ? currentItem.id : ''}" target="_blank" rel="noopener">that item's page</a>.
+            </p>
           </div>
         </div>
       `;
@@ -422,15 +429,11 @@
       card.querySelector('[data-ramen-item]').addEventListener('change', (e) => {
         section.extra = { ...section.extra, price_item_id: e.target.value || null };
         markDirty();
+        renderSections();
         drawPreview();
       });
       card.querySelector('[data-ramen-toppings]').addEventListener('input', (e) => {
         section.extra = { ...section.extra, free_toppings_count: parseInt(e.target.value, 10) || 0 };
-        markDirty();
-        drawPreview();
-      });
-      card.querySelector('[data-ramen-ingredients]').addEventListener('input', (e) => {
-        section.extra = { ...section.extra, ingredients: e.target.value };
         markDirty();
         drawPreview();
       });

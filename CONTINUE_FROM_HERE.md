@@ -2,38 +2,54 @@
 
 Last worked on: 2026-08-15. Read this before doing anything else on the admin tool.
 
-## In progress: Screen 3 redesign (2026-08-15) — committed and pushed, DB migration run, NOT yet click-tested live
+## In progress: Screen 3 redesign (2026-08-15) — migration_006 run live, migration_007 NOT yet run, NOT yet click-tested live
 
-New background art dropped in (`templates/examples/ChatGPT Image Aug 15, 2026, 10_54_51 AM.png`,
-now copied to `templates/Screen_3.png`) with different box positions than the old design, plus a
-content change: the old single "Cakes & Desserts" box is now two side-by-side columns —
-"Desserts" (still a real editable item list: Tofu Dessert, Mango Shake, Korean Cheese Coin, Korea
-Ube Cheese Coin) and "Cakes" (cakes rotate daily, so instead of listing them it's now a fixed
-"please see cashier for today's specials" message — new box style `'static'`, no items, nothing
-to edit).
+New background art dropped in twice today — the first version
+(`ChatGPT Image Aug 15, 2026, 10_54_51 AM.png`) was superseded within the same session by a second
+(`ChatGPT Image Aug 15, 2026, 11_55_00 AM.png`, "use this one instead"), both archived in
+`templates/examples/`. **`templates/Screen_3.png` is currently the 11:55 AM version** — box
+coordinates in `board-renderer.js` were re-measured a second time against it (all 5 boxes shifted
+again vs. the first version; not a straight recolor either time). Content change from the first
+round still stands: the old single "Cakes & Desserts" box is two side-by-side columns —
+"Desserts" (real editable item list: Tofu Dessert, Mango Shake, Korean Cheese Coin, Korea Ube
+Cheese Coin) and "Cakes" (fixed `'static'`-style "please see cashier for today's specials"
+message, cakes rotate daily so no item list).
+
+Also changed today: **Self Serve Ramen's toppings line now comes from the priced item's
+Description field** (edited in `item.html`) instead of a separate manual "Ingredients" text box in
+the board editor — one less place to keep the same text in sync. User asked to "add items for the
+self serve ramen menu"; clarified via question that this meant sourcing the toppings list from the
+item, not adding a real multi-item list to the box (it stays a one-priced-item `'special'` layout).
 
 Changed:
-- `admin/js/board-renderer.js` — all 5 screen_3 box coordinates re-measured (PIL color-boundary
-  scan) against the new background; `cakes_desserts` box replaced by `desserts` (list) + `cakes`
-  (new `static` style, draws `CAKES_STATIC_TEXT` centered/wrapped, no section data needed).
+- `admin/js/board-renderer.js` — screen_3 box coordinates (2nd re-measure, PIL color-boundary
+  scan); `drawRamenBox` now reads `ingredients` from `itemsById[priceItemId].description` instead
+  of `section.extra.ingredients`.
 - `admin/board.html` — `BOX_LABELS`, `ensureSectionsForTemplate`, `renderSections` (new
-  `renderStaticSectionCard`), `diffSections` all updated for the new box_keys and `static` style.
+  `renderStaticSectionCard`), `diffSections` updated for the desserts/cakes split; ramen card's
+  manual "Ingredients" input replaced with a read-only preview of the picked item's description
+  + a link to edit it on that item's page.
 - `supabase/migration_006_screen3_desserts_split.sql` — **run on the live DB 2026-08-15, no
   errors.** Widened the `sections.style` check constraint to allow `'static'`, renamed the live
-  `cakes_desserts` section to `desserts` (keeps its existing section_items), stripped the 8
-  rotating cake items out of it (they stay in the catalog, just unlinked from this board), and
-  inserted the new static `cakes` section.
-- `supabase/seed_boards.sql`, `supabase/seed_items.sql` — updated so a *fresh* install seeds the
-  new `desserts`/`cakes` box_keys directly instead of the old `cakes_desserts`.
-- `admin/SETUP.md` — documents `migration_006` as step 8 in the run order.
+  `cakes_desserts` section to `desserts`, stripped the 8 rotating cake items out of it (stay in
+  the catalog, unlinked from this board), inserted the new static `cakes` section.
+- `supabase/migration_007_ramen_ingredients_from_item.sql` — **new, NOT yet run on the live DB.**
+  Backfills the "Self Serve Ramen" item's Description from the old `extra.ingredients` value, then
+  drops that key from `extra`. **Must run before this deploys**, or the live board's toppings line
+  goes blank (old `extra.ingredients` still has the text, but the renderer stops reading it as of
+  this commit).
+- `supabase/seed_boards.sql`, `supabase/seed_items.sql` — fresh installs seed `desserts`/`cakes`
+  directly, and seed the ramen item's Description instead of `extra.ingredients`.
+- `admin/SETUP.md` — documents both migrations (steps 8–9) and the ramen-description behavior.
 
-Coordinate accuracy was checked by rendering the real `board-renderer.js` against mock data in a
-browser (not against live data in the actual admin tool) — all 5 boxes lined up correctly against
-the new art. **Still needs a real click-through of Screen 3 in `board.html` with live data** to
-confirm nothing looks off in practice — nobody has done that yet.
+Coordinate accuracy was checked by drawing measured rectangles over the source PNG with PIL and
+eyeballing the overlay (pixel-precise) — not by rendering the real admin tool against live data.
+**Still needs a real click-through of Screen 3 in `board.html`** to confirm nothing looks off in
+practice, including the shorter Self Serve Ramen box (h=501 vs the old 736 — math checks out on
+paper: content needs ~472px, box has 501, but hasn't been seen rendered).
 
 One known cosmetic issue, not yet addressed: the Desserts column is narrower than the old combined
-box (251px vs 720px), so "Korean Cheese Coin" and "Korea Ube Cheese Coin" truncate to "Korean
+box (264px vs 720px), so "Korean Cheese Coin" and "Korea Ube Cheese Coin" truncate to "Korean
 Che…" on the rendered board. Flagged to the user 2026-08-15, no decision yet on whether to shorten
 those item names or leave it.
 
