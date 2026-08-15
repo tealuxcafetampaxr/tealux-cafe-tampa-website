@@ -2,7 +2,31 @@
 
 Last worked on: 2026-08-15. Read this before doing anything else on the admin tool.
 
-## In progress: Screen 3 redesign (2026-08-15) — both migrations run live, NOT yet click-tested live
+## In progress: Screen 3 polish round 3 (2026-08-15) — code done, migration_008 NOT yet run, NOT yet click-tested live
+
+Follow-up fixes after seeing the redesign land, all in `admin/js/board-renderer.js`:
+- **Street Food and Breakfast & Bakery items sat too close to the subheading text.** `contentY`
+  bumped from 106→128 (street_food) and 95→117 (breakfast_bakery) — everything else on Screen 3
+  untouched.
+- **"Other Desserts" subheading renamed to "Desserts"** (only group left in that column now that
+  cakes moved out, so "Other" read oddly). `seed_items.sql` updated for fresh installs; live data
+  needs `migration_008_desserts_label_rename.sql` (not yet run).
+- **The Cakes column now has a "CAKES" subheading** above the "please see cashier…" message,
+  drawn to match the list boxes' group-label style (`COLOR_ACCENT`, small-caps, underline flourish)
+  so it reads as a sibling of the "DESSERTS" heading next to it. New `STATIC_HEADING_FONT_SIZE`
+  const in `drawStaticBox`.
+- **Self Serve Ramen's toppings line no longer truncates with an ellipsis.** It used to be one
+  line via `truncateToWidth`; now it wraps to as many lines as needed (shrinking through font
+  sizes `[18,16,14,13,12]` first), anchored below the numbered steps. Verified via a Node.js trace
+  harness (stubbed canvas context, no real `<canvas>`) since the browser test harness couldn't
+  reach a local static server this session — logic checked out (heading position, line counts,
+  no overlap with the steps above) but **nobody has seen it actually rendered yet.**
+
+**Migration needed**: run `migration_008_desserts_label_rename.sql` in the Supabase SQL editor —
+renames existing live `section_items.group_label` from "Other Desserts" to "Desserts" in the
+Desserts section. Everything else this round is code-only, no other DB changes.
+
+## Screen 3 redesign (2026-08-15) — both migrations run live, NOT yet click-tested live
 
 New background art dropped in twice today — the first version
 (`ChatGPT Image Aug 15, 2026, 10_54_51 AM.png`) was superseded within the same session by a second

@@ -102,7 +102,7 @@ insert into _seed_catalog (box_key, category, item_sort, name, description, pric
   -- The 8 cakes below stay in the catalog (box_key null — not linked to any
   -- board section) since the Cakes column on Screen 3 is now a fixed "please
   -- see cashier for today's specials" message, not an item list (cakes
-  -- rotate daily). Only the 4 "Other Desserts" items go on the board.
+  -- rotate daily). Only the 4 "Desserts" items go on the board.
   (null, 'Cakes & Desserts', 0,  'Durian Cake',          '', 9.99, 'none', 'Cakes (rotating selection)'),
   (null, 'Cakes & Desserts', 1,  'Matcha Mille Crepe',   '', 9.25, 'none', 'Cakes (rotating selection)'),
   (null, 'Cakes & Desserts', 2,  'Ube Cake',             '', 9.00, 'none', 'Cakes (rotating selection)'),
@@ -111,10 +111,10 @@ insert into _seed_catalog (box_key, category, item_sort, name, description, pric
   (null, 'Cakes & Desserts', 5,  'Earl Gray Cake',       '', 8.25, 'none', 'Cakes (rotating selection)'),
   (null, 'Cakes & Desserts', 6,  'Dubai Chocolate Cake', '', 8.00, 'none', 'Cakes (rotating selection)'),
   (null, 'Cakes & Desserts', 7,  'Creme Brulee',         '', 7.50, 'none', 'Cakes (rotating selection)'),
-  ('desserts', 'Cakes & Desserts', 8,  'Tofu Dessert',          '', 6.50, 'none', 'Other Desserts'),
-  ('desserts', 'Cakes & Desserts', 9,  'Mango Shake',           '', 6.75, 'none', 'Other Desserts'),
-  ('desserts', 'Cakes & Desserts', 10, 'Korean Cheese Coin',    '', 4.50, 'none', 'Other Desserts'),
-  ('desserts', 'Cakes & Desserts', 11, 'Korea Ube Cheese Coin', '', 5.00, 'none', 'Other Desserts');
+  ('desserts', 'Cakes & Desserts', 8,  'Tofu Dessert',          '', 6.50, 'none', 'Desserts'),
+  ('desserts', 'Cakes & Desserts', 9,  'Mango Shake',           '', 6.75, 'none', 'Desserts'),
+  ('desserts', 'Cakes & Desserts', 10, 'Korean Cheese Coin',    '', 4.50, 'none', 'Desserts'),
+  ('desserts', 'Cakes & Desserts', 11, 'Korea Ube Cheese Coin', '', 5.00, 'none', 'Desserts');
 
 -- ── ITEMS ──────────────────────────────────────────────
 insert into items (name, description, price, tag, category, sort_order)

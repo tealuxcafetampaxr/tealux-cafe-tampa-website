@@ -12,8 +12,9 @@ In the Supabase dashboard for this project (bayaotnzbzhotfrupzhx), in **SQL Edit
 7. `supabase/migration_005_edit_history.sql` — adds the `edit_history` table, powering the "Recent Changes" panel on `item.html` and `board.html`.
 8. `supabase/migration_006_screen3_desserts_split.sql` — adds `'static'` as a valid `sections.style` and splits Screen 3's Cakes & Desserts box into an editable "Desserts" column and a fixed-message "Cakes" column. Safe to run before or after `seed_boards.sql`/`seed_items.sql`.
 9. `supabase/migration_007_ramen_ingredients_from_item.sql` — moves Self Serve Ramen's toppings list from `sections.extra.ingredients` into the priced item's Description field.
+10. `supabase/migration_008_desserts_label_rename.sql` — renames the Desserts column's "Other Desserts" subheading to "Desserts".
 
-If you're setting this up fresh (no `schema.sql` run yet), just run all nine in order.
+If you're setting this up fresh (no `schema.sql` run yet), just run all ten in order.
 
 ## 2. Create employee accounts
 

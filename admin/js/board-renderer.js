@@ -39,8 +39,8 @@ const BOARD_TEMPLATES = {
   screen_3: {
     image: '/templates/Screen_3.png',
     boxes: [
-      { key: 'street_food', x: 49, y: 54, w: 405, h: 504, contentY: 106, style: 'list' },
-      { key: 'breakfast_bakery', x: 509, y: 192, w: 392, h: 346, contentY: 95, style: 'list' },
+      { key: 'street_food', x: 49, y: 54, w: 405, h: 504, contentY: 128, style: 'list' },
+      { key: 'breakfast_bakery', x: 509, y: 192, w: 392, h: 346, contentY: 117, style: 'list' },
       { key: 'desserts', x: 440, y: 584, w: 264, h: 252, contentY: 101, style: 'list' },
       { key: 'cakes', x: 729, y: 584, w: 264, h: 252, contentY: 101, style: 'static' },
       { key: 'self_serve_ramen', x: 1225, y: 54, w: 393, h: 501, contentY: 106, style: 'special' },
@@ -321,22 +321,42 @@ function wrapText(ctx, text, maxWidth) {
   return lines;
 }
 
-// Static box: no items, just a fixed centered message (the "Cakes" column —
-// cakes rotate daily, so it points customers to the cashier instead of
-// listing a stale item list).
+const STATIC_HEADING_FONT_SIZE = Math.round(FONT_STEPS[0] * 0.82);
+
+// Static box: a "CAKES" subheading (matching the list boxes' group-label
+// style, so it reads as a sibling of the Desserts column next to it) plus a
+// fixed centered message below it — cakes rotate daily, so instead of an
+// item list this just points customers to the cashier.
 function drawStaticBox(ctx, box) {
   const innerX = box.x + BOX_PAD_X;
   const innerWidth = box.w - BOX_PAD_X * 2;
   const contentTop = box.y + box.contentY;
   const contentBottom = box.y + box.h - BOX_PAD_BOTTOM;
-  const availableHeight = contentBottom - contentTop;
+
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillStyle = COLOR_ACCENT;
+  ctx.font = `900 ${STATIC_HEADING_FONT_SIZE}px 'Arial Black', Arial, sans-serif`;
+  const headingText = 'CAKES';
+  ctx.fillText(headingText, innerX, contentTop + FONT_STEPS[0] * 0.75);
+  const headingW = ctx.measureText(headingText).width;
+  const lineY = contentTop + FONT_STEPS[0] * 0.75 - FONT_STEPS[0] * 0.28;
+  ctx.strokeStyle = COLOR_ACCENT;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(innerX + headingW + 12, lineY);
+  ctx.lineTo(innerX + innerWidth, lineY);
+  ctx.stroke();
+
+  const headingBottom = contentTop + FONT_STEPS[0] * HEADING_LINE_FACTOR;
+  const availableHeight = contentBottom - headingBottom;
 
   const fontSize = 22;
   const lineHeight = fontSize * 1.35;
   ctx.font = `700 ${fontSize}px Arial, sans-serif`;
   const lines = wrapText(ctx, CAKES_STATIC_TEXT, innerWidth);
   const totalHeight = lines.length * lineHeight;
-  let y = contentTop + Math.max(0, (availableHeight - totalHeight) / 2) + fontSize * 0.85;
+  let y = headingBottom + Math.max(0, (availableHeight - totalHeight) / 2) + fontSize * 0.85;
 
   ctx.textAlign = 'center';
   ctx.fillStyle = COLOR_ACCENT;
@@ -398,11 +418,29 @@ function drawRamenBox(ctx, box, section, itemsById) {
   });
 
   if (ingredients) {
-    const bottomY = box.y + box.h - 30;
-    ctx.font = `700 18px Arial, sans-serif`;
+    // Wrap to as many lines as it takes to show every topping — shrinking
+    // the font first rather than cutting the list short with an ellipsis.
+    const topLimit = y + 8;
+    const bottomLimit = box.y + box.h - 20;
+    const toppingsSteps = [18, 16, 14, 13, 12];
+    let toppingsFont = toppingsSteps[toppingsSteps.length - 1];
+    let lines = [];
+    for (const size of toppingsSteps) {
+      ctx.font = `700 ${size}px Arial, sans-serif`;
+      const candidate = wrapText(ctx, ingredients, innerWidth);
+      lines = candidate;
+      toppingsFont = size;
+      if (candidate.length * (size * 1.3) <= (bottomLimit - topLimit)) break;
+    }
+    ctx.font = `700 ${toppingsFont}px Arial, sans-serif`;
     ctx.fillStyle = COLOR_ACCENT;
-    const text = truncateToWidth(ctx, ingredients, innerWidth);
-    ctx.fillText(text, innerX, bottomY);
+    const lineHeight = toppingsFont * 1.3;
+    let ly = topLimit + toppingsFont * 0.85;
+    lines.forEach((line) => {
+      if (ly > bottomLimit) return; // safety: never draw past the box
+      ctx.fillText(line, innerX, ly);
+      ly += lineHeight;
+    });
   }
 }
 
