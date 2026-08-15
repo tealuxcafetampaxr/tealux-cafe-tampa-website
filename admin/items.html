@@ -23,9 +23,14 @@
   <main class="admin-main">
     <div class="admin-header-row">
       <h1>Item Catalog</h1>
-      <div class="admin-actions">
+      <div class="admin-actions" id="actions-normal">
         <button type="button" class="btn btn-outline" id="btn-duplicate" disabled>Duplicate</button>
+        <button type="button" class="btn btn-outline" id="btn-edit-table">Edit</button>
         <a href="/admin/item.html" class="btn btn-crimson">+ Add Item</a>
+      </div>
+      <div class="admin-actions" id="actions-editing" style="display:none;">
+        <button type="button" class="btn btn-outline" id="btn-cancel-edit">Cancel</button>
+        <button type="button" class="btn btn-crimson" id="btn-save-edit">Save Changes</button>
       </div>
     </div>
 
@@ -47,6 +52,7 @@
       </select>
       <span class="results-count" id="results-count"></span>
     </div>
+    <p class="editing-note" id="editing-note" style="display:none;">Editing — search, filters, and sorting are locked until you save or cancel.</p>
 
     <div class="panel" style="padding:0;">
       <div id="loading" class="spinner-row"><span class="loading-spinner"></span></div>
@@ -80,6 +86,16 @@
     let sortKey = null;
     let sortDir = 'asc';
     const filters = { search: '', category: '', status: '', tag: '' };
+    let editMode = false;
+    let pendingEdits = {}; // itemId -> { name, category, price, status, tag }
+    let dirty = false;
+
+    function markDirty() { dirty = true; }
+    warnOnUnsavedChanges(() => dirty);
+
+    function getCategoryList() {
+      return [...new Set(items.map((i) => (i.category || '').trim()).filter(Boolean))].sort();
+    }
 
     function money(n) {
       return '$' + Number(n || 0).toFixed(2);
@@ -96,7 +112,7 @@
     function populateCategoryFilter() {
       const select = document.getElementById('filter-category');
       const current = select.value;
-      const cats = [...new Set(items.map((i) => (i.category || '').trim()).filter(Boolean))].sort();
+      const cats = getCategoryList();
       select.innerHTML = '<option value="">All categories</option>' +
         cats.map((c) => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
       if (cats.includes(current)) select.value = current;
@@ -165,6 +181,8 @@
       document.getElementById('table-wrap').style.display = '';
       document.getElementById('empty-state').style.display = 'none';
 
+      const cats = editMode ? getCategoryList() : null;
+
       visible.forEach((item) => {
         const tr = document.createElement('tr');
         tr.dataset.id = item.id;
@@ -173,35 +191,82 @@
           ? `<img class="item-thumb" src="${item.primary_image_url}" alt="" />`
           : `<div class="item-thumb-placeholder">—</div>`;
 
-        tr.innerHTML = `
-          <td onclick="event.stopPropagation()"><input type="radio" name="select-item" data-select ${item.id === selectedId ? 'checked' : ''} /></td>
-          <td>${thumbCell}</td>
-          <td>
-            <strong>${escapeHtml(item.name)}</strong>
-            ${item.featured ? ' <span class="badge badge-featured">★</span>' : ''}
-          </td>
-          <td>${escapeHtml(item.category || '—')}</td>
-          <td>${money(item.price)}</td>
-          <td><span class="badge badge-${item.status}">${statusLabel(item.status)}</span></td>
-          <td>${tagLabel(item.tag) ? `<span class="badge badge-tag">${tagLabel(item.tag)}</span>` : ''}</td>
-        `;
+        if (editMode) {
+          const edit = pendingEdits[item.id] || {
+            name: item.name, category: item.category || '', price: item.price, status: item.status, tag: item.tag,
+          };
+          const categoryOptions = cats.map((c) =>
+            `<option value="${escapeHtml(c)}" ${edit.category === c ? 'selected' : ''}>${escapeHtml(c)}</option>`
+          ).join('');
 
-        tr.addEventListener('click', () => {
-          window.location.href = `/admin/item.html?id=${item.id}`;
-        });
-        const radio = tr.querySelector('[data-select]');
-        radio.addEventListener('click', (e) => {
-          e.stopPropagation();
-          // Radios don't natively toggle off on a second click — do it manually.
-          if (selectedId === item.id) {
-            selectedId = null;
-            radio.checked = false;
-            document.getElementById('btn-duplicate').disabled = true;
-          } else {
-            selectedId = item.id;
-            document.getElementById('btn-duplicate').disabled = false;
-          }
-        });
+          tr.innerHTML = `
+            <td></td>
+            <td>${thumbCell}</td>
+            <td class="editing"><input type="text" class="row-edit" data-field="name" value="${escapeHtml(edit.name)}" /></td>
+            <td class="editing">
+              <select class="row-edit" data-field="category">
+                <option value="" ${edit.category === '' ? 'selected' : ''}>— no category —</option>
+                ${categoryOptions}
+              </select>
+            </td>
+            <td class="editing"><input type="number" step="0.01" min="0" class="row-edit row-edit-price" data-field="price" value="${edit.price}" /></td>
+            <td class="editing">
+              <select class="row-edit" data-field="status">
+                <option value="active" ${edit.status === 'active' ? 'selected' : ''}>Active</option>
+                <option value="sold_out" ${edit.status === 'sold_out' ? 'selected' : ''}>Sold Out</option>
+                <option value="inactive" ${edit.status === 'inactive' ? 'selected' : ''}>Inactive</option>
+              </select>
+            </td>
+            <td class="editing">
+              <select class="row-edit" data-field="tag">
+                <option value="none" ${edit.tag === 'none' ? 'selected' : ''}>None</option>
+                <option value="new" ${edit.tag === 'new' ? 'selected' : ''}>New</option>
+                <option value="best_seller" ${edit.tag === 'best_seller' ? 'selected' : ''}>Best Seller</option>
+                <option value="limited" ${edit.tag === 'limited' ? 'selected' : ''}>Limited</option>
+              </select>
+            </td>
+          `;
+
+          tr.querySelectorAll('[data-field]').forEach((input) => {
+            input.addEventListener('input', () => {
+              const current = pendingEdits[item.id] || { ...edit };
+              const field = input.dataset.field;
+              current[field] = field === 'price' ? parseFloat(input.value) || 0 : input.value;
+              pendingEdits[item.id] = current;
+              markDirty();
+            });
+          });
+        } else {
+          tr.innerHTML = `
+            <td onclick="event.stopPropagation()"><input type="radio" name="select-item" data-select ${item.id === selectedId ? 'checked' : ''} /></td>
+            <td>${thumbCell}</td>
+            <td>
+              <strong>${escapeHtml(item.name)}</strong>
+              ${item.featured ? ' <span class="badge badge-featured">★</span>' : ''}
+            </td>
+            <td>${escapeHtml(item.category || '—')}</td>
+            <td>${money(item.price)}</td>
+            <td><span class="badge badge-${item.status}">${statusLabel(item.status)}</span></td>
+            <td>${tagLabel(item.tag) ? `<span class="badge badge-tag">${tagLabel(item.tag)}</span>` : ''}</td>
+          `;
+
+          tr.addEventListener('click', () => {
+            window.location.href = `/admin/item.html?id=${item.id}`;
+          });
+          const radio = tr.querySelector('[data-select]');
+          radio.addEventListener('click', (e) => {
+            e.stopPropagation();
+            // Radios don't natively toggle off on a second click — do it manually.
+            if (selectedId === item.id) {
+              selectedId = null;
+              radio.checked = false;
+              document.getElementById('btn-duplicate').disabled = true;
+            } else {
+              selectedId = item.id;
+              document.getElementById('btn-duplicate').disabled = false;
+            }
+          });
+        }
 
         tbody.appendChild(tr);
       });
@@ -242,24 +307,29 @@
     }
 
     document.getElementById('search-input').addEventListener('input', (e) => {
+      if (editMode) return;
       filters.search = e.target.value;
       renderRows();
     });
     document.getElementById('filter-category').addEventListener('change', (e) => {
+      if (editMode) return;
       filters.category = e.target.value;
       renderRows();
     });
     document.getElementById('filter-status').addEventListener('change', (e) => {
+      if (editMode) return;
       filters.status = e.target.value;
       renderRows();
     });
     document.getElementById('filter-tag').addEventListener('change', (e) => {
+      if (editMode) return;
       filters.tag = e.target.value;
       renderRows();
     });
 
     document.querySelectorAll('th.sortable').forEach((th) => {
       th.addEventListener('click', () => {
+        if (editMode) return;
         const key = th.dataset.sort;
         if (sortKey === key) {
           sortDir = sortDir === 'asc' ? 'desc' : 'asc';
@@ -270,6 +340,69 @@
         updateSortIndicators();
         renderRows();
       });
+    });
+
+    function setToolbarDisabled(disabled) {
+      ['search-input', 'filter-category', 'filter-status', 'filter-tag'].forEach((id) => {
+        document.getElementById(id).disabled = disabled;
+      });
+      document.getElementById('editing-note').style.display = disabled ? '' : 'none';
+    }
+
+    document.getElementById('btn-edit-table').addEventListener('click', () => {
+      editMode = true;
+      pendingEdits = {};
+      document.getElementById('actions-normal').style.display = 'none';
+      document.getElementById('actions-editing').style.display = '';
+      setToolbarDisabled(true);
+      renderRows();
+    });
+
+    document.getElementById('btn-cancel-edit').addEventListener('click', () => {
+      editMode = false;
+      pendingEdits = {};
+      dirty = false;
+      document.getElementById('actions-normal').style.display = '';
+      document.getElementById('actions-editing').style.display = 'none';
+      setToolbarDisabled(false);
+      renderRows();
+    });
+
+    document.getElementById('btn-save-edit').addEventListener('click', async () => {
+      const btn = document.getElementById('btn-save-edit');
+      const edits = Object.entries(pendingEdits);
+      for (const [, edit] of edits) {
+        if (!edit.name || !edit.name.trim()) {
+          alert('Every item needs a name — check the highlighted rows before saving.');
+          return;
+        }
+      }
+
+      btn.disabled = true;
+      btn.textContent = 'Saving…';
+      for (const [itemId, edit] of edits) {
+        const original = items.find((i) => i.id === itemId);
+        if (!original) continue;
+        const payload = { name: edit.name.trim(), category: edit.category, price: edit.price, status: edit.status, tag: edit.tag };
+        const historyLines = diffItemFields(original, payload);
+        if (!historyLines.length) continue;
+        const { error } = await sb.from('items').update(payload).eq('id', itemId);
+        if (error) {
+          alert(`Could not save "${original.name}": ${error.message}`);
+          continue;
+        }
+        await logEditHistory('item', itemId, historyLines);
+      }
+      btn.disabled = false;
+      btn.textContent = 'Save Changes';
+
+      editMode = false;
+      pendingEdits = {};
+      dirty = false;
+      document.getElementById('actions-normal').style.display = '';
+      document.getElementById('actions-editing').style.display = 'none';
+      setToolbarDisabled(false);
+      await loadItems();
     });
 
     document.getElementById('btn-duplicate').addEventListener('click', async () => {

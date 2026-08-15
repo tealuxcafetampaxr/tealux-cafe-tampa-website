@@ -181,6 +181,24 @@ textarea { resize: vertical; min-height: 90px; }
   opacity: 0.5;
   white-space: nowrap;
 }
+.editing-note {
+  font-family: 'Arial', sans-serif;
+  font-size: 0.75rem;
+  color: var(--crimson2);
+  margin: -8px 0 18px;
+}
+
+/* ── INLINE ROW EDITING (items.html) ── */
+.item-table td.editing { padding: 8px 10px; }
+.item-table input.row-edit, .item-table select.row-edit {
+  width: 100%;
+  padding: 7px 9px;
+  font-size: 0.8rem;
+  border: 2px solid var(--border);
+  border-radius: 6px;
+}
+.item-table input.row-edit:focus, .item-table select.row-edit:focus { border-color: var(--gold); }
+.item-table input.row-edit-price { max-width: 90px; }
 
 /* ── TABLE (item list) ── */
 .table-wrap { overflow-x: auto; }

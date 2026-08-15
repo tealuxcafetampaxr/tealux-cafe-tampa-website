@@ -97,3 +97,36 @@ function warnOnUnsavedChanges(isDirty) {
     e.returnValue = '';
   });
 }
+
+/**
+ * Diffs an item's editable fields into human-readable edit_history summary
+ * lines (e.g. "Price changed from $6.50 to $6.75"). Shared by item.html's
+ * single-item editor and items.html's inline table edit.
+ */
+function diffItemFields(before, after) {
+  const tagText = { none: 'None', new: 'New', best_seller: 'Best Seller', limited: 'Limited' };
+  const statusText = { active: 'Active', sold_out: 'Sold Out', inactive: 'Inactive' };
+  const lines = [];
+  if ((before.name || '') !== after.name) {
+    lines.push(`Name changed from "${before.name || ''}" to "${after.name}"`);
+  }
+  if (Number(before.price || 0) !== Number(after.price || 0)) {
+    lines.push(`Price changed from $${Number(before.price || 0).toFixed(2)} to $${Number(after.price).toFixed(2)}`);
+  }
+  if ((before.status || 'active') !== after.status) {
+    lines.push(`Status changed from ${statusText[before.status] || before.status} to ${statusText[after.status] || after.status}`);
+  }
+  if ((before.tag || 'none') !== after.tag) {
+    lines.push(`Tag changed from ${tagText[before.tag] || before.tag || 'None'} to ${tagText[after.tag] || after.tag}`);
+  }
+  if ((before.category || '') !== (after.category || '')) {
+    lines.push(`Category changed from "${before.category || '—'}" to "${after.category || '—'}"`);
+  }
+  if ((before.description || '') !== (after.description || '')) {
+    lines.push('Description updated');
+  }
+  if (!!before.featured !== !!after.featured) {
+    lines.push(after.featured ? 'Marked as featured' : 'Unmarked as featured');
+  }
+  return lines;
+}

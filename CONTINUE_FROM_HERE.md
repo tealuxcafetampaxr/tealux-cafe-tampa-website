@@ -2,54 +2,68 @@
 
 Last worked on: 2026-08-14. Read this before doing anything else on the admin tool.
 
-## Status: deployed and fully click-through tested
+## Status: deployed, click-through tested, actively iterating
 
-The admin tool is live at `tealuxcafetampa.com/admin/login.html` (unlisted on purpose —
-no link from the public site; decided 2026-08-14, revisit only if Kha/Chao ask for a
-bookmark-free way in). All commits below are pushed to `main`.
+The admin tool is live at `tealuxcafetampa.com/admin/login.html` (unlisted on purpose — no
+link from the public site; decided 2026-08-14, revisit only if Kha/Chao ask for a
+bookmark-free way in).
+
+Latest pushed commit: `c044060` — "Add a Preview All Boards page". Everything through that
+commit is confirmed working DB-side (all 7 SQL files run, no errors) but **not yet click-tested
+in the browser** for the newest features (inactive status, edit history, unsaved-changes
+warning, Preview All page).
+
+**Uncommitted local work as of now**: inline bulk-edit mode on `items.html` (see below) — not
+yet committed or pushed.
 
 ## Confirmed working (real click-through, real data, live site)
 
-- Login/auth gate, items catalog (`items.html`, `item.html`) — infinite-loading bug fixed.
-- **All 3 screens** now have real data loaded and have been clicked through by the user —
-  no further layout issues reported (2026-08-14).
-- **Screen 3** specifically: item lists, group-label dropdown, board-photo upload/drag/resize,
-  and PNG export (1920×1080, correct resolution, photos render cleanly) all confirmed good
-  (`snippets/screen-3.png`).
+- Login/auth gate, items catalog — infinite-loading bug fixed.
+- All 3 screens have real data and were clicked through — no layout issues reported.
+- Board photos (upload/drag/resize), PNG export, row-spacing slider — all confirmed good on
+  Screen 3 (`snippets/screen-3.png`); Screens 1/2 passed a visual click-through too.
 - Milk Tea box (Screen 1) text position — was rendering off the left edge, re-measured and fixed.
-- **Row-spacing slider** — user confirmed it works well (2026-08-14).
 
-## If something looks off later
+## If a box's text ever looks misaligned later
 
 Only the milk_tea box's coordinates were rigorously re-verified pixel-by-pixel (the rest passed
-a visual click-through, not a precision re-measure). If a box's text ever looks misaligned,
-re-measure it via PIL color-boundary scan on the source PNG (see `board-renderer.js`
-`BOARD_TEMPLATES`) rather than eyeballing/guessing new coordinates.
+a visual click-through, not a precision re-measure). Re-measure via PIL color-boundary scan on
+the source PNG (see `board-renderer.js` `BOARD_TEMPLATES`) rather than eyeballing new coordinates.
 
-## Built 2026-08-14, NOT yet run/tested — inactive status, edit history, unsaved-changes warning
+## Built but not yet browser-tested (pushed in commits `3b509ea` and `c044060`)
 
-- **`migration_004_inactive_status.sql`** — adds `items.status = 'inactive'` (in addition to
-  active/sold_out). Selecting it excludes the item from the board editor's "add item" and ramen
-  "priced item" dropdowns, AND the renderer itself skips it even if already linked to a board
-  from before it was deactivated (`board-renderer.js` `buildRows()`/`drawRamenBox()`).
-- **`migration_005_edit_history.sql`** — new `edit_history` table. Both `item.html` and
-  `board.html` now show a "Recent Changes" panel (last 90 days) generated from **human-readable
-  summaries built at save time** (e.g. "Price changed from $6.50 to $6.75"), not raw DB diffs —
-  deliberate tradeoff, see the migration file's comment. Only captures edits made through the
-  admin tool itself. No per-person attribution (shared login) — what/when only, confirmed
-  acceptable by the user. "90 days" is a rolling *display* window (query filter), not actual row
-  deletion — also deliberate, data volume here is tiny.
-- **Unsaved-changes warning** — both pages now track a `dirty` flag and warn via the native
-  browser `beforeunload` dialog if you try to navigate away with unsaved edits. Board photos
-  (which already save immediately on drag-end) do NOT count as dirty — only Save-gated changes
-  (item fields, section items/labels, row spacing, ramen fields) do.
-- Both migrations run against the live DB, no errors (2026-08-14). **Not yet tested in the app, and not yet committed/pushed** — the code above is still only local (Netlify hasn't deployed it).
+- **Inactive item status** (`migration_004`) — excluded from board dropdowns and skipped by the
+  renderer even if already linked to a board.
+- **90-day edit history** (`migration_005`) — "Recent Changes" panel on `item.html`/`board.html`,
+  human-readable summaries generated at save time, not raw diffs. What/when only, no per-person
+  attribution (shared login, confirmed acceptable). "90 days" is a display filter, not deletion.
+- **Unsaved-changes warning** — native browser dialog on both pages if you navigate away with
+  unsaved edits. Board photos (save instantly on drag-end) don't count as unsaved.
+- **`/admin/preview.html`** ("Preview All" button on the boards dashboard) — every board
+  rendered side by side in one read-only view, for checking visual consistency across screens.
+
+## Built 2026-08-14, NOT yet committed — inline bulk edit on items.html
+
+New "Edit" button on the items table toggles every visible row into inline-editable cells
+(name/category/price/status/tag), instead of opening each item individually. Key decisions:
+
+- Editing is scoped to whatever's currently visible under the active search/filters — search,
+  filters, and sorting are **locked** (disabled + a note shown) while editing, specifically to
+  avoid the "did my edit get lost when the list re-filtered" confusion.
+- Category is a plain dropdown of already-existing categories only — no "add new" inline (that
+  stays exclusive to `item.html`'s fuller editor).
+- "Save Changes" diffs each touched row against its original DB values (reusing `diffItemFields`,
+  now hoisted into `supabase-client.js` so both `item.html` and `items.html` share it) and only
+  writes + logs history for rows that actually changed.
+- "Cancel" discards in-memory edits with no DB calls.
+- Wired into the same `dirty`/`warnOnUnsavedChanges` pattern as the other pages.
+
+**Not yet committed, pushed, or tested.**
 
 ## Ongoing manual task (not blocked on anything)
 
 - **Individual item photos** (distinct from board photos) still need uploading one-by-one
-  through `/admin/item.html`'s gallery uploader — that's just data entry for Kha/Chao as they
-  use the tool, not a build task.
+  through `/admin/item.html`'s gallery uploader — manual data entry for Kha/Chao, not a build task.
 
 ## Quick orientation if resuming cold
 
@@ -64,4 +78,6 @@ re-measure it via PIL color-boundary scan on the source PNG (see `board-renderer
   deliberate exception** — freeform upload/drag/resize, rendered as their own layer strictly
   between the background and the item-text layer so a photo can never cover text.
 - `admin/js/board-renderer.js` is the single source of truth for template box coordinates,
-  font-size auto-shrink, and now per-section row spacing (`sections.extra.line_spacing`).
+  font-size auto-shrink, and per-section row spacing (`sections.extra.line_spacing`).
+- `admin/js/supabase-client.js` holds shared helpers used across every admin page: session
+  gating, edit-history read/write/render, `warnOnUnsavedChanges`, and `diffItemFields`.
