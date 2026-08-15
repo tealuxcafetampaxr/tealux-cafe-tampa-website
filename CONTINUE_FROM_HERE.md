@@ -2,7 +2,29 @@
 
 Last worked on: 2026-08-15. Read this before doing anything else on the admin tool.
 
-## In progress: Screen 3 polish round 3 (2026-08-15) — migration_008 run live, NOT yet click-tested live
+## In progress: Screen 3 polish round 4 (2026-08-15) — code-only, no migration, NOT yet click-tested live
+
+User saw round 3 live and reported: the Cakes column's "specials" text was getting clipped by the
+mooncake-coin photo baked into the background (its left edge sits around x=945 in the 1672-wide
+reference frame — measured via PIL pixel scan of `templates/Screen_3.png`). The old 50/50 desserts/
+cakes split put the Cakes box's right edge at 993, running 48px under the coin.
+
+Fix, all in `admin/js/board-renderer.js` (`BOARD_TEMPLATES.screen_3.boxes` + `drawStaticBox`):
+- **Desserts** widened 264→310 (x stays 440) — "a bit more space," per request. Bonus: this also
+  stopped "Korea Ube Cheese Coin" truncating with an ellipsis (the cosmetic issue flagged after
+  round 1/2, fixed as a side effect rather than by name-shortening).
+- **Cakes** narrowed 264→155 and shifted right (729→775), so its right edge lands at 930 — 15px
+  clear of the coin's 945 measured left edge.
+- `drawStaticBox` now uses a tighter local padding (`STATIC_PAD_X = 10` vs the shared `BOX_PAD_X`
+  = 26) to make the most of the narrower column, and shrinks the message through font sizes
+  `[22,20,18,16,15]` until it wraps to 3 lines or fewer (`STATIC_MESSAGE_MAX_LINES`), rather than a
+  fixed 22px — the "three row text" ask. Verified via the same Node.js trace-harness approach as
+  round 3 (real browser test server still unreachable this session): at the final geometry it
+  wraps to exactly "Please see" / "cashier for" / "today's specials" and stays inside the 930px
+  right edge.
+
+No new migration this round — everything here is `board-renderer.js` geometry/logic, no DB schema
+or data changes.
 
 Follow-up fixes after seeing the redesign land, all in `admin/js/board-renderer.js`:
 - **Street Food and Breakfast & Bakery items sat too close to the subheading text.** `contentY`

@@ -41,8 +41,11 @@ const BOARD_TEMPLATES = {
     boxes: [
       { key: 'street_food', x: 49, y: 54, w: 405, h: 504, contentY: 128, style: 'list' },
       { key: 'breakfast_bakery', x: 509, y: 192, w: 392, h: 346, contentY: 117, style: 'list' },
-      { key: 'desserts', x: 440, y: 584, w: 264, h: 252, contentY: 101, style: 'list' },
-      { key: 'cakes', x: 729, y: 584, w: 264, h: 252, contentY: 101, style: 'static' },
+      { key: 'desserts', x: 440, y: 584, w: 310, h: 252, contentY: 101, style: 'list' },
+      // Narrower and pulled left of the mooncake-coin photo baked into the
+      // background (starts around x=945) — the old 50/50 split's right edge
+      // (993) ran under the coin, clipping the last line of the message.
+      { key: 'cakes', x: 775, y: 584, w: 155, h: 252, contentY: 101, style: 'static' },
       { key: 'self_serve_ramen', x: 1225, y: 54, w: 393, h: 501, contentY: 106, style: 'special' },
     ],
   },
@@ -322,14 +325,19 @@ function wrapText(ctx, text, maxWidth) {
 }
 
 const STATIC_HEADING_FONT_SIZE = Math.round(FONT_STEPS[0] * 0.82);
+// Tighter than BOX_PAD_X — this column is narrow on purpose (kept clear of
+// the mooncake-coin photo to its right), so it needs every spare pixel.
+const STATIC_PAD_X = 10;
+const STATIC_MESSAGE_STEPS = [22, 20, 18, 16, 15];
+const STATIC_MESSAGE_MAX_LINES = 3;
 
 // Static box: a "CAKES" subheading (matching the list boxes' group-label
 // style, so it reads as a sibling of the Desserts column next to it) plus a
 // fixed centered message below it — cakes rotate daily, so instead of an
 // item list this just points customers to the cashier.
 function drawStaticBox(ctx, box) {
-  const innerX = box.x + BOX_PAD_X;
-  const innerWidth = box.w - BOX_PAD_X * 2;
+  const innerX = box.x + STATIC_PAD_X;
+  const innerWidth = box.w - STATIC_PAD_X * 2;
   const contentTop = box.y + box.contentY;
   const contentBottom = box.y + box.h - BOX_PAD_BOTTOM;
 
@@ -351,10 +359,20 @@ function drawStaticBox(ctx, box) {
   const headingBottom = contentTop + FONT_STEPS[0] * HEADING_LINE_FACTOR;
   const availableHeight = contentBottom - headingBottom;
 
-  const fontSize = 22;
+  // Shrink through font sizes until the message wraps to 3 lines or fewer,
+  // rather than guessing one fixed size — this column is narrow enough that
+  // real word-wrap width varies with exact font metrics.
+  let fontSize = STATIC_MESSAGE_STEPS[STATIC_MESSAGE_STEPS.length - 1];
+  let lines = [];
+  for (const size of STATIC_MESSAGE_STEPS) {
+    ctx.font = `700 ${size}px Arial, sans-serif`;
+    const candidate = wrapText(ctx, CAKES_STATIC_TEXT, innerWidth);
+    lines = candidate;
+    fontSize = size;
+    if (candidate.length <= STATIC_MESSAGE_MAX_LINES) break;
+  }
+
   const lineHeight = fontSize * 1.35;
-  ctx.font = `700 ${fontSize}px Arial, sans-serif`;
-  const lines = wrapText(ctx, CAKES_STATIC_TEXT, innerWidth);
   const totalHeight = lines.length * lineHeight;
   let y = headingBottom + Math.max(0, (availableHeight - totalHeight) / 2) + fontSize * 0.85;
 
