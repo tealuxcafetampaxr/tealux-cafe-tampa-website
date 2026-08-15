@@ -2,120 +2,58 @@
 
 Last worked on: 2026-08-15. Read this before doing anything else on the admin tool.
 
-## In progress: Screen 3 polish round 4 (2026-08-15) — code-only, no migration, NOT yet click-tested live
-
-User saw round 3 live and reported: the Cakes column's "specials" text was getting clipped by the
-mooncake-coin photo baked into the background (its left edge sits around x=945 in the 1672-wide
-reference frame — measured via PIL pixel scan of `templates/Screen_3.png`). The old 50/50 desserts/
-cakes split put the Cakes box's right edge at 993, running 48px under the coin.
-
-Fix, all in `admin/js/board-renderer.js` (`BOARD_TEMPLATES.screen_3.boxes` + `drawStaticBox`):
-- **Desserts** widened 264→310 (x stays 440) — "a bit more space," per request. Bonus: this also
-  stopped "Korea Ube Cheese Coin" truncating with an ellipsis (the cosmetic issue flagged after
-  round 1/2, fixed as a side effect rather than by name-shortening).
-- **Cakes** narrowed 264→155 and shifted right (729→775), so its right edge lands at 930 — 15px
-  clear of the coin's 945 measured left edge.
-- `drawStaticBox` now uses a tighter local padding (`STATIC_PAD_X = 10` vs the shared `BOX_PAD_X`
-  = 26) to make the most of the narrower column, and shrinks the message through font sizes
-  `[22,20,18,16,15]` until it wraps to 3 lines or fewer (`STATIC_MESSAGE_MAX_LINES`), rather than a
-  fixed 22px — the "three row text" ask. Verified via the same Node.js trace-harness approach as
-  round 3 (real browser test server still unreachable this session): at the final geometry it
-  wraps to exactly "Please see" / "cashier for" / "today's specials" and stays inside the 930px
-  right edge.
-
-No new migration this round — everything here is `board-renderer.js` geometry/logic, no DB schema
-or data changes.
-
-Follow-up fixes after seeing the redesign land, all in `admin/js/board-renderer.js`:
-- **Street Food and Breakfast & Bakery items sat too close to the subheading text.** `contentY`
-  bumped from 106→128 (street_food) and 95→117 (breakfast_bakery) — everything else on Screen 3
-  untouched.
-- **"Other Desserts" subheading renamed to "Desserts"** (only group left in that column now that
-  cakes moved out, so "Other" read oddly). `seed_items.sql` updated for fresh installs; live data
-  updated via `migration_008_desserts_label_rename.sql` — **run 2026-08-15, no errors.**
-- **The Cakes column now has a "CAKES" subheading** above the "please see cashier…" message,
-  drawn to match the list boxes' group-label style (`COLOR_ACCENT`, small-caps, underline flourish)
-  so it reads as a sibling of the "DESSERTS" heading next to it. New `STATIC_HEADING_FONT_SIZE`
-  const in `drawStaticBox`.
-- **Self Serve Ramen's toppings line no longer truncates with an ellipsis.** It used to be one
-  line via `truncateToWidth`; now it wraps to as many lines as needed (shrinking through font
-  sizes `[18,16,14,13,12]` first), anchored below the numbered steps. Verified via a Node.js trace
-  harness (stubbed canvas context, no real `<canvas>`) since the browser test harness couldn't
-  reach a local static server this session — logic checked out (heading position, line counts,
-  no overlap with the steps above) but **nobody has seen it actually rendered yet.**
-
-All DB work for this round is done. Still open: nobody has seen this round's changes actually
-rendered in the real admin tool yet (see the ramen toppings note above) — worth a real
-click-through of Screen 3 next.
-
-## Screen 3 redesign (2026-08-15) — both migrations run live, NOT yet click-tested live
-
-New background art dropped in twice today — the first version
-(`ChatGPT Image Aug 15, 2026, 10_54_51 AM.png`) was superseded within the same session by a second
-(`ChatGPT Image Aug 15, 2026, 11_55_00 AM.png`, "use this one instead"), both archived in
-`templates/examples/`. **`templates/Screen_3.png` is currently the 11:55 AM version** — box
-coordinates in `board-renderer.js` were re-measured a second time against it (all 5 boxes shifted
-again vs. the first version; not a straight recolor either time). Content change from the first
-round still stands: the old single "Cakes & Desserts" box is two side-by-side columns —
-"Desserts" (real editable item list: Tofu Dessert, Mango Shake, Korean Cheese Coin, Korea Ube
-Cheese Coin) and "Cakes" (fixed `'static'`-style "please see cashier for today's specials"
-message, cakes rotate daily so no item list).
-
-Also changed today: **Self Serve Ramen's toppings line now comes from the priced item's
-Description field** (edited in `item.html`) instead of a separate manual "Ingredients" text box in
-the board editor — one less place to keep the same text in sync. User asked to "add items for the
-self serve ramen menu"; clarified via question that this meant sourcing the toppings list from the
-item, not adding a real multi-item list to the box (it stays a one-priced-item `'special'` layout).
-
-Changed:
-- `admin/js/board-renderer.js` — screen_3 box coordinates (2nd re-measure, PIL color-boundary
-  scan); `drawRamenBox` now reads `ingredients` from `itemsById[priceItemId].description` instead
-  of `section.extra.ingredients`.
-- `admin/board.html` — `BOX_LABELS`, `ensureSectionsForTemplate`, `renderSections` (new
-  `renderStaticSectionCard`), `diffSections` updated for the desserts/cakes split; ramen card's
-  manual "Ingredients" input replaced with a read-only preview of the picked item's description
-  + a link to edit it on that item's page.
-- `supabase/migration_006_screen3_desserts_split.sql` — **run on the live DB 2026-08-15, no
-  errors.** Widened the `sections.style` check constraint to allow `'static'`, renamed the live
-  `cakes_desserts` section to `desserts`, stripped the 8 rotating cake items out of it (stay in
-  the catalog, unlinked from this board), inserted the new static `cakes` section.
-- `supabase/migration_007_ramen_ingredients_from_item.sql` — **run on the live DB 2026-08-15, no
-  errors.** Backfilled the "Self Serve Ramen" item's Description from the old `extra.ingredients`
-  value, then dropped that key from `extra`.
-- `supabase/seed_boards.sql`, `supabase/seed_items.sql` — fresh installs seed `desserts`/`cakes`
-  directly, and seed the ramen item's Description instead of `extra.ingredients`.
-- `admin/SETUP.md` — documents both migrations (steps 8–9) and the ramen-description behavior.
-
-Coordinate accuracy was checked by drawing measured rectangles over the source PNG with PIL and
-eyeballing the overlay (pixel-precise) — not by rendering the real admin tool against live data.
-**Still needs a real click-through of Screen 3 in `board.html`** to confirm nothing looks off in
-practice, including the shorter Self Serve Ramen box (h=501 vs the old 736 — math checks out on
-paper: content needs ~472px, box has 501, but hasn't been seen rendered).
-
-One known cosmetic issue, not yet addressed: the Desserts column is narrower than the old combined
-box (264px vs 720px), so "Korean Cheese Coin" and "Korea Ube Cheese Coin" truncate to "Korean
-Che…" on the rendered board. Flagged to the user 2026-08-15, no decision yet on whether to shorten
-those item names or leave it.
-
 ## Status: deployed, click-through tested, actively iterating
 
 The admin tool is live at `tealuxcafetampa.com/admin/login.html` (unlisted on purpose — no
 link from the public site; decided 2026-08-14, revisit only if Kha/Chao ask for a
 bookmark-free way in).
 
-Latest pushed commit: `97ee397` — "Fix board Save duplicating items, add save confirmation,
-blank out $0.00". Everything is pushed and DB-side is fully set up (all 7 SQL files run, no
-errors), but most of it (inactive status, edit history, unsaved-changes warning, Preview All
-page, inline bulk edit, the 3 fixes below) has **not yet been click-tested in the browser**.
+Latest pushed commit: `4b44178` — "Narrow Cakes column to clear the coin photo, widen Desserts".
+Everything is pushed, DB-side is fully set up (all 10 SQL files run, no errors), and the Screen 3
+redesign below has been click-tested live and confirmed good by the user (2026-08-15).
 
 **No uncommitted local work right now.**
 
-**Outstanding data-cleanup task**: the pre-fix version of Save could duplicate items in
-`section_items` if Save was double-clicked (see bug #1 below) — this happened for real to the
-user before the fix landed. The fix stops it going forward but does NOT retroactively clean up
-any duplicate rows already created. Check whichever board(s) were being edited when this
-happened — if the same item appears twice in a box, that's a leftover duplicate `section_items`
-row that needs deleting in Supabase.
+**Outstanding data-cleanup task** (unrelated to Screen 3, from 2026-08-14): the pre-fix version of
+Save could duplicate items in `section_items` if Save was double-clicked — this happened for real
+to the user before the fix landed in `97ee397`. The fix stops it going forward but does NOT
+retroactively clean up any duplicate rows already created. Check whichever board(s) were being
+edited when this happened — if the same item appears twice in a box, that's a leftover duplicate
+`section_items` row that needs deleting in Supabase.
+
+## Screen 3 redesign (2026-08-15) — confirmed working live
+
+New food-photo background art (through two ChatGPT revisions, archived in `templates/examples/`;
+`templates/Screen_3.png` is the final `11_55_00 AM` version) with all 5 box coordinates re-measured
+against it via PIL pixel scans — not a straight recolor of the old design, positions shifted.
+
+Content changes from the old single-box design, now confirmed live:
+- The old "Cakes & Desserts" box is two independently-editable columns: **Desserts** (real item
+  list: Tofu Dessert, Mango Shake, Korean Cheese Coin, Korea Ube Cheese Coin, subheading
+  "DESSERTS") and **Cakes** (new `'static'` box style — no item list, cakes rotate daily, so it
+  just shows a "CAKES" subheading + a fixed "please see cashier for today's specials" message).
+  Desserts is 310px wide, Cakes 155px and shifted right (x=775) to clear a mooncake-coin photo
+  baked into the background around x=945 — the original even 50/50 split ran under it.
+- **Self Serve Ramen's toppings line** now reads from the priced catalog item's Description field
+  (edit it on that item's page in `item.html`) instead of a separate manual field in the board
+  editor, and wraps to multiple lines instead of truncating with an ellipsis.
+- Street Food and Breakfast & Bakery got more breathing room between their subheading and the
+  first item row (`contentY` increased).
+
+DB migrations run live, in order, all clean: `migration_006_screen3_desserts_split.sql` (adds the
+`'static'` section style, splits the old `cakes_desserts` section into `desserts` + `cakes`),
+`migration_007_ramen_ingredients_from_item.sql` (moves ramen toppings text into the item's
+Description), `migration_008_desserts_label_rename.sql` (renames "Other Desserts" → "Desserts").
+`seed_boards.sql`/`seed_items.sql` updated to match for any future fresh install.
+
+`admin/js/board-renderer.js` is the source of truth for all of this — `BOARD_TEMPLATES.screen_3`
+for box coordinates, `drawStaticBox` for the Cakes column, `drawRamenBox` for the ramen toppings.
+
+## If a box's text ever looks misaligned later
+
+Re-measure via PIL color-boundary scan on the source PNG (see `board-renderer.js`
+`BOARD_TEMPLATES`) rather than eyeballing new coordinates — this is how every Screen 1/2/3 box was
+measured, including the full Screen 3 redesign above.
 
 ## Bugs found and fixed 2026-08-14 (real usage on board.html)
 
@@ -124,9 +62,7 @@ row that needs deleting in Supabase.
    Supabase call's `error`. A rapid second click while the first save was still in flight ran the
    whole insert loop again against the same not-yet-reloaded `sections` state (still holding
    `tmp-` ids for newly-added items), inserting a second `section_items` row for each new item.
-   This is almost certainly what happened, given bug #2 below — no confirmation meant the natural
-   reaction to "did that work?" is to click again. Fixed: the button now disables + shows
-   "Saving…" for the duration, guarded by an `isSaving` flag.
+   Fixed: the button now disables + shows "Saving…" for the duration, guarded by an `isSaving` flag.
 2. **No confirmation the save succeeded.** Fixed alongside #1 — the button now shows "Saved ✓"
    (green) or "Save failed — <reason>" (red, since `saveBoard()` now actually surfaces Supabase
    errors instead of silently swallowing them) next to the Save button.
@@ -143,12 +79,7 @@ row that needs deleting in Supabase.
 - Board photos (upload/drag/resize), PNG export, row-spacing slider — all confirmed good on
   Screen 3 (`snippets/screen-3.png`); Screens 1/2 passed a visual click-through too.
 - Milk Tea box (Screen 1) text position — was rendering off the left edge, re-measured and fixed.
-
-## If a box's text ever looks misaligned later
-
-Only the milk_tea box's coordinates were rigorously re-verified pixel-by-pixel (the rest passed
-a visual click-through, not a precision re-measure). Re-measure via PIL color-boundary scan on
-the source PNG (see `board-renderer.js` `BOARD_TEMPLATES`) rather than eyeballing new coordinates.
+- Screen 3 redesign (see section above) — click-tested live 2026-08-15, confirmed good.
 
 ## Built but not yet browser-tested (pushed in commits `3b509ea`, `c044060`, `df41401`, `97ee397`)
 
@@ -179,7 +110,9 @@ the source PNG (see `board-renderer.js` `BOARD_TEMPLATES`) rather than eyeballin
   how the renderer works) first.
 - DB setup order: `schema.sql` → `migration_002_templates.sql` → `seed_boards.sql` →
   `seed_items.sql` → `migration_003_board_images.sql` → `migration_004_inactive_status.sql` →
-  `migration_005_edit_history.sql`. All 7 have been run on the live DB.
+  `migration_005_edit_history.sql` → `migration_006_screen3_desserts_split.sql` →
+  `migration_007_ramen_ingredients_from_item.sql` → `migration_008_desserts_label_rename.sql`.
+  All 10 have been run on the live DB.
 - The **section/box layout** is NOT freeform — it's 3 fixed-design PNGs with named content boxes
   at exact coordinates. Don't reintroduce a generic drag-and-drop *layout* builder, that was
   explicitly rejected in favor of matching the real TV designs. **Board photos are the one
