@@ -8,12 +8,12 @@
   <meta name="theme-color" content="#111111" />
   <style>
     :root {
-      --crimson:  #D4B700;
-      --crimson2: #B89E00;
+      --crimson:  #FFE600;
+      --crimson2: #DDC700;
       --black:    #111111;
       --white:    #FFFFFF;
       --cream:    #F7F2EC;
-      --gold:     #D4B700;
+      --gold:     #FFE600;
     }
 
     /* ── ADA / ACCESSIBILITY ── */
@@ -94,13 +94,21 @@
 
     /* ── HERO ── */
     .hero {
-      background: radial-gradient(ellipse at center, #E0C400 0%, #B89E00 100%);
-      display: grid;
-      grid-template-columns: 1fr 1fr;
+      background: radial-gradient(ellipse at center, var(--gold) 0%, var(--crimson2) 100%);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
       align-items: center;
+      text-align: center;
       min-height: 520px;
       padding: 60px 72px;
-      gap: 40px;
+    }
+    .hero-text {
+      max-width: 640px;
+      margin: 0 auto;
+    }
+    .hero-text .btn-row {
+      justify-content: center;
     }
     .hero-text h1 {
       font-size: 4rem;
@@ -116,16 +124,6 @@
       color: rgba(0,0,0,0.6);
       line-height: 1.7;
       margin-bottom: 36px;
-    }
-    .hero-img {
-      display: flex;
-      justify-content: center;
-      align-items: flex-end;
-    }
-    .hero-img img {
-      width: 100%;
-      max-width: 320px;
-      filter: drop-shadow(0 20px 40px rgba(0,0,0,0.5));
     }
 
     /* ── BUTTONS ── */
@@ -169,7 +167,7 @@
     }
     .btn-crimson {
       background: var(--crimson);
-      color: var(--white);
+      color: var(--black);
       border: 3px solid var(--crimson);
     }
     .btn-crimson:hover {
@@ -536,14 +534,6 @@
       margin-top: 16px;
       line-height: 1.6;
     }
-    .menu-card-wide {
-      grid-column: span 2;
-    }
-    .menu-item-cols {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 0 24px;
-    }
     /* ── HAMBURGER BUTTON ── */
     .nav-toggle {
       display: none;
@@ -600,14 +590,11 @@
 
       /* Hero */
       .hero {
-        grid-template-columns: 1fr;
         padding: 48px 24px 0;
-        text-align: center;
         min-height: auto;
       }
+      .hero-text { max-width: none; }
       .hero-text h1 { font-size: 2.8rem; }
-      .hero-img img { max-width: 240px; margin: 0 auto; }
-      .hero .btn-row { justify-content: center; }
 
       /* Sections */
       section { padding: 48px 24px; }
@@ -616,8 +603,6 @@
       /* Menu */
       .menu-wrap { padding: 48px 24px; }
       .menu-grid { grid-template-columns: 1fr; }
-      .menu-card-wide { grid-column: span 1; }
-      .menu-item-cols { grid-template-columns: 1fr; }
 
       /* Order strip */
       .order-strip { padding: 48px 24px; }
@@ -674,7 +659,7 @@
   <main id="main-content">
   <div class="hero" role="banner">
     <div class="hero-text">
-      <h1>BOBA.<br>TEA.<br>DESSERTS.</h1>
+      <h1>BOBA.<br>TEA.<br>FOOD.</h1>
       <p>
         Tampa's spot for handcrafted boba<br>
         and milk teas. Come as you are.
@@ -683,9 +668,6 @@
         <a href="#order" class="btn btn-dark">Order Delivery</a>
         <a href="#location" class="btn btn-outline-dark">Find Us</a>
       </div>
-    </div>
-    <div class="hero-img">
-      <img src="tealux-guy.png" alt="Tealux Cafe mascot" />
     </div>
   </div>
 
@@ -778,19 +760,23 @@
         </div>
 
         <!-- DESSERTS -->
-        <div class="menu-card menu-card-wide">
+        <div class="menu-card">
           <h3>Desserts &amp; Bakery</h3>
-          <div class="menu-item-cols">
-            <div class="menu-item"><span class="menu-item-name">Matcha Mille Crepe</span></div>
-            <div class="menu-item"><span class="menu-item-name">Ube Cake</span></div>
-            <div class="menu-item"><span class="menu-item-name">Dubai Chocolate Cake</span></div>
-            <div class="menu-item"><span class="menu-item-name">Earl Gray Cake</span></div>
-            <div class="menu-item"><span class="menu-item-name">Creme Brulee</span></div>
-            <div class="menu-item"><span class="menu-item-name">Korean Cheese Coin</span></div>
-            <div class="menu-item"><span class="menu-item-name">Croissant &amp; Croissant Sandwich</span></div>
-            <div class="menu-item"><span class="menu-item-name">NY Style Bagels</span></div>
-          </div>
-          <p class="menu-note" style="margin-top:20px;">Rotating cake selection available in store · Add toppings to any drink — Popping Boba, Tapioca Pearls, Jellies, Cheese Foam &amp; more</p>
+          <div class="menu-item"><span class="menu-item-name">Creme Brulee</span></div>
+          <div class="menu-item"><span class="menu-item-name">Korean Cheese Coin</span></div>
+          <div class="menu-item"><span class="menu-item-name">Croissant &amp; Croissant Sandwich</span></div>
+          <div class="menu-item"><span class="menu-item-name">NY Style Bagels</span></div>
+          <p class="menu-note">Rotating cake selection available in store</p>
+        </div>
+
+        <!-- TOPPINGS -->
+        <div class="menu-card">
+          <h3>Toppings</h3>
+          <div class="menu-item"><span class="menu-item-name">Popping Boba</span></div>
+          <div class="menu-item"><span class="menu-item-name">Tapioca Pearls</span></div>
+          <div class="menu-item"><span class="menu-item-name">Jellies</span></div>
+          <div class="menu-item"><span class="menu-item-name">Cheese Foam</span></div>
+          <p class="menu-note">Add to any drink · + many more</p>
         </div>
 
       </div>
