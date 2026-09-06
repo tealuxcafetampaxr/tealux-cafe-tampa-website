@@ -1,6 +1,6 @@
 # Continue From Here
 
-Last worked on: 2026-08-15. Read this before doing anything else on the admin tool.
+Last worked on: 2026-09-06. Read this before doing anything else on the admin tool.
 
 ## Status: deployed, click-through tested, actively iterating
 
@@ -13,6 +13,23 @@ Everything is pushed, DB-side is fully set up (all 10 SQL files run, no errors),
 redesign below has been click-tested live and confirmed good by the user (2026-08-15).
 
 **No uncommitted local work right now.**
+
+## Supabase free-tier auto-pause caused a login outage (2026-09-06)
+
+User reported "loading error" on login. Root cause: the Supabase project (free tier) had
+auto-paused from inactivity — Supabase pauses free projects after ~7 days with no API activity.
+Every request to `bayaotnzbzhotfrupzhx.supabase.co` (including `/auth/v1/token`) was returning
+503, which `login.html` surfaced as "Failed to fetch". Not a code bug — verified `login.html` and
+`supabase-client.js` behave correctly once the project is live.
+
+Fixed by the user manually restoring the project from the Supabase dashboard. Restore took a
+couple minutes to fully come back online (kept getting 503 on `/auth/v1/token` for ~15-20s after
+the dashboard said "restored" before it actually worked) — don't assume it's still broken if the
+first retry right after unpausing still 503s.
+
+Decision: leaving it on the free tier as-is (no scheduled keep-alive ping, no upgrade to paid).
+If this recurs and becomes a real problem, the options are: upgrade to Supabase Pro (no
+auto-pause), or set up a periodic ping to keep it active.
 
 **Outstanding data-cleanup task** (unrelated to Screen 3, from 2026-08-14): the pre-fix version of
 Save could duplicate items in `section_items` if Save was double-clicked — this happened for real
