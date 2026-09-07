@@ -14,6 +14,23 @@ redesign below has been click-tested live and confirmed good by the user (2026-0
 
 **No uncommitted local work right now.**
 
+## Kiosk: per-card title-visibility toggle + display duration (2026-09-06) — migration NOT run yet
+
+Added to the kiosk build below, after it was already live: `supabase/migration_010_kiosk_card_options.sql`
+adds `show_title` (bool, default true) and `duration_seconds` (int, default 12) to `kiosk_cards`.
+**This migration has NOT been run on the live DB yet** — until it is, saving/editing a card via
+`/kiosk/admin/manage.html` will error (the columns don't exist), so run it before using the admin
+again.
+
+- "Show title on the kiosk display" checkbox — lets staff keep a title on the card (so it's
+  identifiable in the admin list) without it being drawn over a photo/video that already has text
+  baked in. Independent of whether the title field has a value at all (see "Title is optional"
+  above) — this only controls whether a *present* title actually renders.
+- "Display Duration (seconds)" — per-card, not global. A quick promo and a slower highlight
+  shouldn't necessarily get the same amount of screen time, so each card sets its own; the display
+  reads whichever card is currently showing and reschedules the rotation timer using that card's
+  duration each time (not one fixed interval for every card). Defaults to 12s if left blank.
+
 ## New: counter kiosk display (2026-09-06) — built, live-tested, DB migration IS run
 
 New `/kiosk` project, same repo/domain/Supabase project as the rest of the site (decided against a

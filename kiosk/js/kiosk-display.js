@@ -6,7 +6,7 @@ const SUPABASE_URL = 'https://bayaotnzbzhotfrupzhx.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_iC9KS1wORUph1KBmukwWBw_WVg3lc0i';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
-const CARD_SECONDS = 12;
+const DEFAULT_CARD_SECONDS = 12;
 const REFRESH_MINUTES = 3;
 
 const stage = document.getElementById('stage');
@@ -50,14 +50,17 @@ function renderCard(card) {
     el.appendChild(badge);
   }
 
-  const overlay = document.createElement('div');
-  overlay.className = 'kiosk-card-overlay';
-  overlay.innerHTML = `
-    <div class="kiosk-card-title">${escapeHtml(card.title)}</div>
-    ${card.subtitle ? `<div class="kiosk-card-subtitle">${escapeHtml(card.subtitle)}</div>` : ''}
-    ${card.price ? `<div class="kiosk-card-price">${escapeHtml(card.price)}</div>` : ''}
-  `;
-  el.appendChild(overlay);
+  const showTitle = card.show_title !== false && card.title;
+  if (showTitle || card.subtitle || card.price) {
+    const overlay = document.createElement('div');
+    overlay.className = 'kiosk-card-overlay';
+    overlay.innerHTML = `
+      ${showTitle ? `<div class="kiosk-card-title">${escapeHtml(card.title)}</div>` : ''}
+      ${card.subtitle ? `<div class="kiosk-card-subtitle">${escapeHtml(card.subtitle)}</div>` : ''}
+      ${card.price ? `<div class="kiosk-card-price">${escapeHtml(card.price)}</div>` : ''}
+    `;
+    el.appendChild(overlay);
+  }
 
   return el;
 }
@@ -78,12 +81,18 @@ function showCard(index) {
   renderDots();
 }
 
-function startRotation() {
-  if (rotateTimer) clearInterval(rotateTimer);
+// Each card can set its own display duration, so rotation is a
+// self-rescheduling timeout (reading the *current* card's duration every
+// time) rather than one fixed-interval timer for every card.
+function scheduleNext() {
+  if (rotateTimer) clearTimeout(rotateTimer);
   if (cards.length <= 1) return;
-  rotateTimer = setInterval(() => {
+  const activeCard = cards[current];
+  const seconds = (activeCard && activeCard.duration_seconds) || DEFAULT_CARD_SECONDS;
+  rotateTimer = setTimeout(() => {
     showCard((current + 1) % cards.length);
-  }, CARD_SECONDS * 1000);
+    scheduleNext();
+  }, seconds * 1000);
 }
 
 function renderEmpty() {
@@ -114,7 +123,7 @@ async function loadCards() {
   stage.innerHTML = '';
   cards.forEach((card) => stage.appendChild(renderCard(card)));
   showCard(wasEmpty ? 0 : Math.min(current, cards.length - 1));
-  startRotation();
+  scheduleNext();
 }
 
 loadCards();

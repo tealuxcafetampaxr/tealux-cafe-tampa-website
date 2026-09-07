@@ -14,11 +14,15 @@ const editorTitleEl = document.getElementById('editor-title');
 const fieldId = document.getElementById('card-id');
 const fieldType = document.getElementById('card-type');
 const fieldTitle = document.getElementById('card-title');
+const fieldShowTitle = document.getElementById('card-show-title');
 const fieldSubtitle = document.getElementById('card-subtitle');
 const fieldPrice = document.getElementById('card-price');
+const fieldDuration = document.getElementById('card-duration');
 const fieldActive = document.getElementById('card-active');
 const uploadTile = document.getElementById('upload-tile');
 const fileInput = document.getElementById('file-input');
+
+const DEFAULT_DURATION_SECONDS = 12;
 
 let cards = [];
 let pendingMediaUrl = null;
@@ -117,8 +121,10 @@ function openEditor(card) {
   fieldId.value = card ? card.id : '';
   fieldType.value = card ? card.type : 'promo';
   fieldTitle.value = card ? card.title : '';
+  fieldShowTitle.checked = card ? card.show_title !== false : true;
   fieldSubtitle.value = card ? card.subtitle || '' : '';
   fieldPrice.value = card ? card.price || '' : '';
+  fieldDuration.value = card && card.duration_seconds ? card.duration_seconds : DEFAULT_DURATION_SECONDS;
   fieldActive.checked = card ? card.active : true;
 
   updateUploadTile();
@@ -181,12 +187,15 @@ document.getElementById('btn-cancel').addEventListener('click', closeEditor);
 document.getElementById('btn-save').addEventListener('click', async () => {
   clearError();
   const title = fieldTitle.value.trim();
+  const duration = parseInt(fieldDuration.value, 10);
 
   const payload = {
     type: fieldType.value,
     title,
+    show_title: fieldShowTitle.checked,
     subtitle: fieldSubtitle.value.trim(),
     price: fieldPrice.value.trim(),
+    duration_seconds: duration > 0 ? duration : DEFAULT_DURATION_SECONDS,
     media_url: pendingMediaUrl,
     media_type: pendingMediaType,
     active: fieldActive.checked,
