@@ -118,10 +118,17 @@ logo overlay, scrim, video autoplay, and pagination dots all worked. Also re-ver
 800×1280 portrait resolution via a local iframe harness (not part of the repo) — text/price/dots
 all fit cleanly with the tuned media-query sizing.
 
+**Tablet is up and running the display** (per the user, 2026-09-06) — not just a one-off test
+anymore. Side benefit: this should resolve the earlier Supabase free-tier auto-pause issue as a
+natural side effect, not something separately built — the display polls `kiosk_cards`/
+`kiosk_settings` every 3 minutes as long as it's running, which is enough regular API activity to
+keep the project active (auto-pause only triggers after ~7 days of *zero* activity). Only matters
+if the tablet is actually left running day to day, same condition as above.
+
 **Not done yet:**
-- The user has run the page in a regular browser on the tablet and confirmed it works (see above),
-  but it's not yet set up in an actual kiosk-mode browser app (e.g. Fully Kiosk Browser) for
-  full-screen/auto-launch/always-on behavior — that install/config step is still to come.
+- Unconfirmed whether it's in an actual kiosk-mode browser app (e.g. Fully Kiosk Browser) for
+  full-screen/auto-launch/always-on behavior, or just a regular browser tab someone left open —
+  worth checking if it needs to survive a reboot/power cycle unattended.
 - Original two test cards (`Test Kiosk Image`, `Test Kiosk Video`) have since been replaced — the
   user added several real cards (boba drink promo graphics) via `/kiosk/admin/manage.html`
   directly, using the optional-title feature (blank titles, since the graphics have text baked in).
