@@ -103,12 +103,17 @@ async function moveCard(id, direction) {
 
   const a = cards[index];
   const b = cards[swapIndex];
-  const { error } = await sb.from('kiosk_cards').upsert([
-    { id: a.id, sort_order: b.sort_order },
-    { id: b.id, sort_order: a.sort_order },
+  // Plain updates, not upsert: these rows already exist, and upsert's
+  // INSERT-side NOT NULL validation (on columns like `title` that aren't
+  // included here) fires before it even checks whether to update instead --
+  // it fails even though the row is already there and would've taken the
+  // update path.
+  const [{ error: errorA }, { error: errorB }] = await Promise.all([
+    sb.from('kiosk_cards').update({ sort_order: b.sort_order }).eq('id', a.id),
+    sb.from('kiosk_cards').update({ sort_order: a.sort_order }).eq('id', b.id),
   ]);
-  if (error) {
-    showError('Failed to reorder: ' + error.message);
+  if (errorA || errorB) {
+    showError('Failed to reorder: ' + (errorA || errorB).message);
     return;
   }
   await loadCards();
