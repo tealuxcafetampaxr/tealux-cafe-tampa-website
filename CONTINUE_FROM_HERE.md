@@ -14,37 +14,61 @@ redesign below has been click-tested live and confirmed good by the user (2026-0
 
 **No uncommitted local work right now.**
 
-## New: counter kiosk display (2026-09-06) — built, DB migration NOT yet run
+## New: counter kiosk display (2026-09-06) — built, live-tested, DB migration IS run
 
 New `/kiosk` project, same repo/domain/Supabase project as the rest of the site (decided against a
 separate branch — Netlify only deploys `main`, so a branch alone doesn't share hosting; a new
-top-level folder deployed on `main` does).
+top-level folder deployed on `main` does). Pushed live and click-tested end-to-end with real
+content on 2026-09-06 — see "Confirmed working" below.
 
-- `tealuxcafetampa.com/kiosk/` — public, unauthenticated display for a tablet mounted at the
-  counter. Rotates through active `kiosk_cards` (12s each, fades), refetches every 3 min so
-  content updates without touching the tablet. Falls back to a plain welcome message if the table
-  is empty/missing or the fetch fails — degrades gracefully.
+**Physical tablet (confirmed 2026-09-06):** Samsung Galaxy Tab E 8.0 (SM-T377V), 800×1280 portrait,
+Android 7.1.1 Nougat, ~1.5GB RAM, ~9-10 years old. **Display is locked to portrait** — this is the
+target, not landscape (earlier in the build we assumed landscape; the user corrected this once the
+actual device was confirmed). Because the WebView on a device this old may be stuck on a fairly
+ancient Chromium build, `kiosk/css/kiosk.css` deliberately avoids CSS the WebView might not
+support: no `inset` shorthand (needs Chrome 87+, replaced with explicit `top/right/bottom/left:0`),
+no flexbox `gap` (needs Chrome 84+, replaced with margins on `.kiosk-dot`). Font sizes/padding are
+also tuned specifically for the real 800px-wide portrait viewport via a `max-width: 900px` media
+query. **JS compatibility (arrow functions, template literals, async/await, etc.) has NOT been
+verified against the actual device** — these need Chrome ~55+ which the WebView likely clears, but
+this is unverified guesswork, not a tested fact. Test on the physical tablet once available; if
+things break, that's the first place to look.
+
+- `tealuxcafetampa.com/kiosk/` — public, unauthenticated display. Full-bleed photo or autoplaying
+  muted/looped video fills the whole screen (`object-fit: cover`, so it adapts to any aspect ratio
+  without separate layout branches); title/subtitle/price sit in a dark gradient scrim at the
+  bottom, legible over any image. Rotates through active `kiosk_cards` (12s each, fades), refetches
+  every 3 min so content updates without touching the tablet. Falls back to a plain welcome message
+  if the table is empty/missing or the fetch fails — degrades gracefully.
 - `tealuxcafetampa.com/kiosk/admin/manage.html` — separate lightweight admin (not folded into
   items.html/board.html, per the user's choice), reusing the *same* login/session
   (`admin/js/supabase-client.js`) and the existing `item-images` storage bucket for media (path
   prefix `kiosk/...`). Add/edit/delete cards, toggle active, reorder with up/down buttons (no
   drag-and-drop — kept intentionally simple). Linked from the main admin nav ("Kiosk") on all 5
-  admin pages.
+  admin pages. **Title is optional** — the user's photos/videos often already have text baked in
+  (e.g. a designed promo graphic), so a card doesn't need a separate title/subtitle to be valid;
+  blank-titled cards show as "Untitled card" in the admin list only (never shown to customers).
 - Content model: one `kiosk_cards` table, `type` is `'highlight'` (this week's featured item,
   shown with a badge) or `'promo'` (rotating announcement) — both just rotate together in
   `sort_order`, no separate layout logic for the two. Each card's media is either a photo or a
-  video (`media_url` + `media_type`) — the admin file picker accepts both and the display
-  auto-plays video muted/looped/full-bleed instead of a background-image.
+  video (`media_url` + `media_type`) — the admin file picker accepts both.
+
+**Confirmed working (real click-through, live data, 2026-09-06):** logged into
+`/kiosk/admin/manage.html` live, uploaded the user's two real test files (`test-kiosk-image-01.png`,
+a "Coffee Week" promo graphic; `test-kiosk-video-01.mp4`, an animated version of the same graphic —
+they look near-identical at a glance, that's expected, not a bug) as one highlight card and one
+promo card, saved both, and confirmed both render correctly at `/kiosk/` on production — badge,
+logo overlay, scrim, video autoplay, and pagination dots all worked. Also re-verified at the real
+800×1280 portrait resolution via a local iframe harness (not part of the repo) — text/price/dots
+all fit cleanly with the tuned media-query sizing.
 
 **Not done yet:**
-- `supabase/migration_009_kiosk.sql` has NOT been run on the live DB. The kiosk display will just
-  show the empty-state welcome message and the manage page will error on load until it's run
-  (Supabase SQL Editor, same as every other migration).
-- Not yet click-tested live with real data — once the migration's run, add a card via
-  `/kiosk/admin/manage.html` and confirm it shows up at `/kiosk/` (allow up to 3 min for the
-  display's poll, or just reload it).
-- No physical tablet set up yet — this was built for "a tablet mounted at the counter" per the
-  user, but the actual device/kiosk-mode browser setup is still to be done.
+- JS compatibility on the actual old WebView — untested, see above.
+- Tablet not physically set up as a kiosk yet (no kiosk-mode browser app installed/configured) —
+  device specs are known now, but the actual "mount it and point a kiosk browser at the URL" step
+  is still to come.
+- The two test cards (`Test Kiosk Image`, `Test Kiosk Video`) are still live on production —
+  delete or replace them via `/kiosk/admin/manage.html` before this is customer-facing for real.
 
 Also fixed in passing: `admin/css/admin.css` still had the pre-rebrand dull yellow
 (`#D4B700`/`#B89E00`) after the site-wide brand color fix below — updated to match, and fixed a

@@ -57,7 +57,7 @@ function renderList() {
         : `<div class="item-thumb-placeholder">No photo</div>`}
       <div class="card-info">
         <h3>
-          ${escapeHtml(card.title)}
+          ${card.title ? escapeHtml(card.title) : '<em>Untitled card</em>'}
           ${card.type === 'highlight' ? '<span class="badge badge-tag">Highlight</span>' : ''}
           ${card.active ? '<span class="badge badge-active">Active</span>' : '<span class="badge badge-inactive">Inactive</span>'}
         </h3>
@@ -181,10 +181,6 @@ document.getElementById('btn-cancel').addEventListener('click', closeEditor);
 document.getElementById('btn-save').addEventListener('click', async () => {
   clearError();
   const title = fieldTitle.value.trim();
-  if (!title) {
-    showError('Title is required.');
-    return;
-  }
 
   const payload = {
     type: fieldType.value,

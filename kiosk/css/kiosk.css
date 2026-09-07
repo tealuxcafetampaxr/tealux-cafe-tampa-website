@@ -1,8 +1,14 @@
 /* Tealux Cafe Tampa — counter kiosk display
    Shares the main site's design tokens (see index.html :root).
-   Full-bleed media with a text overlay — designed for a landscape tablet,
-   but object-fit:cover + an absolutely-positioned overlay adapts to any
-   screen aspect ratio without separate layout branches. */
+   Full-bleed media with a text overlay — object-fit:cover + an
+   absolutely-positioned overlay adapts to any screen aspect ratio without
+   separate layout branches. Locked to portrait for the physical kiosk
+   tablet (Samsung Galaxy Tab E 8.0, 800x1280 portrait — an ~9-10 year old
+   Android 7.1 device), but the design works either way.
+
+   Deliberately avoids CSS features that old Android WebView may not
+   support: no `inset` shorthand (Chrome 87+), no flexbox `gap` (Chrome
+   84+) — both replaced with the older explicit equivalents below. */
 
 :root {
   --gold:  #FFE600;
@@ -42,12 +48,12 @@ html, body {
 
 .kiosk-stage {
   position: absolute;
-  inset: 0;
+  top: 0; right: 0; bottom: 0; left: 0;
 }
 
 .kiosk-card {
   position: absolute;
-  inset: 0;
+  top: 0; right: 0; bottom: 0; left: 0;
   opacity: 0;
   transition: opacity 0.8s ease;
   pointer-events: none;
@@ -59,7 +65,7 @@ html, body {
 
 .kiosk-card-media {
   position: absolute;
-  inset: 0;
+  top: 0; right: 0; bottom: 0; left: 0;
   background-size: cover;
   background-position: center;
   background-color: #1e1e1e;
@@ -69,7 +75,7 @@ html, body {
 }
 .kiosk-card-video {
   position: absolute;
-  inset: 0;
+  top: 0; right: 0; bottom: 0; left: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -130,11 +136,11 @@ html, body {
   z-index: 6;
   display: flex;
   justify-content: center;
-  gap: 10px;
 }
 .kiosk-dot {
   width: 10px;
   height: 10px;
+  margin: 0 5px;
   border-radius: 50%;
   background: rgba(255,255,255,0.35);
   transition: background 0.2s;
@@ -143,7 +149,7 @@ html, body {
 
 .kiosk-empty {
   position: absolute;
-  inset: 0;
+  top: 0; right: 0; bottom: 0; left: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -154,3 +160,15 @@ html, body {
 }
 .kiosk-empty .kiosk-card-title { font-size: 2rem; text-shadow: none; }
 .kiosk-empty .kiosk-card-subtitle { font-family: 'Arial', sans-serif; }
+
+/* Sized for the actual kiosk tablet: an 8" 800x1280 portrait screen. */
+@media (max-width: 900px) {
+  .kiosk-logo { top: 16px; }
+  .kiosk-logo-main { font-size: 1rem; }
+  .kiosk-logo-sub { font-size: 0.45rem; letter-spacing: 4px; }
+  .kiosk-badge { top: 16px; left: 16px; font-size: 0.75rem; padding: 8px 18px; }
+  .kiosk-card-overlay { padding: 36px 28px 30px; }
+  .kiosk-card-title { font-size: 2.1rem; margin-bottom: 8px; }
+  .kiosk-card-subtitle { font-size: 1rem; max-width: none; }
+  .kiosk-card-price { font-size: 1.3rem; margin-top: 10px; }
+}
