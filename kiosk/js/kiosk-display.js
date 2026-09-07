@@ -9,6 +9,7 @@ const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 const DEFAULT_CARD_SECONDS = 12;
 const REFRESH_MINUTES = 3;
 
+const kiosk = document.querySelector('.kiosk');
 const stage = document.getElementById('stage');
 const dots = document.getElementById('dots');
 
@@ -75,9 +76,14 @@ function renderDots() {
 }
 
 function showCard(index) {
+  const prevIndex = current;
   current = index;
   const els = stage.querySelectorAll('.kiosk-card');
-  els.forEach((el, i) => el.classList.toggle('is-active', i === current));
+  els.forEach((el, i) => {
+    el.classList.remove('is-active', 'is-prev');
+    if (i === current) el.classList.add('is-active');
+    else if (i === prevIndex) el.classList.add('is-prev');
+  });
   renderDots();
 }
 
@@ -105,6 +111,22 @@ function renderEmpty() {
   dots.innerHTML = '';
 }
 
+async function loadSettings() {
+  const { data, error } = await sb
+    .from('kiosk_settings')
+    .select('transition_style')
+    .eq('id', 1)
+    .single();
+
+  // Fade (no data-transition attribute) is the safe fallback if this table
+  // doesn't exist yet, the row's missing, or the fetch fails for any reason.
+  if (error || !data) {
+    kiosk.removeAttribute('data-transition');
+    return;
+  }
+  kiosk.setAttribute('data-transition', data.transition_style);
+}
+
 async function loadCards() {
   const { data, error } = await sb
     .from('kiosk_cards')
@@ -126,5 +148,16 @@ async function loadCards() {
   scheduleNext();
 }
 
-loadCards();
-setInterval(loadCards, REFRESH_MINUTES * 60 * 1000);
+// Settings must be applied to the DOM *before* cards are created -- setting
+// data-transition on an already-populated stage doesn't reliably re-trigger
+// the percentage-based transform for the slide style on existing elements
+// (confirmed: works when applied first, not when applied retroactively).
+// loadSettings() and loadCards() were previously fired concurrently with no
+// ordering guarantee, so the cards could win the race and render first.
+async function refresh() {
+  await loadSettings();
+  await loadCards();
+}
+
+refresh();
+setInterval(refresh, REFRESH_MINUTES * 60 * 1000);

@@ -243,9 +243,33 @@ listEl.addEventListener('click', (e) => {
   }
 });
 
+const fieldTransition = document.getElementById('setting-transition');
+
+async function loadSettings() {
+  const { data, error } = await sb
+    .from('kiosk_settings')
+    .select('transition_style')
+    .eq('id', 1)
+    .single();
+  if (error || !data) return;
+  fieldTransition.value = data.transition_style;
+}
+
+document.getElementById('btn-save-settings').addEventListener('click', async () => {
+  clearError();
+  const { error } = await sb
+    .from('kiosk_settings')
+    .update({ transition_style: fieldTransition.value })
+    .eq('id', 1);
+  if (error) {
+    showError('Failed to save display settings: ' + error.message);
+  }
+});
+
 (async () => {
   const session = await requireSession();
   if (!session) return;
   wireSignOutButtons();
+  await loadSettings();
   await loadCards();
 })();

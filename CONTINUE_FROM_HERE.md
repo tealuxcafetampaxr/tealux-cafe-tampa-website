@@ -14,6 +14,47 @@ redesign below has been click-tested live and confirmed good by the user (2026-0
 
 **No uncommitted local work right now.**
 
+## Kiosk: transition style setting (fade/slide/none) + a real race-condition bug fix (2026-09-06)
+
+Added `supabase/migration_011_kiosk_settings.sql` — a single-row `kiosk_settings` table
+(`transition_style`: `'fade'` | `'slide'` | `'none'`), global (not per-card, unlike duration —
+mixing transition styles between different card-pairs would look inconsistent). Editable via a
+new "Transition Between Cards" dropdown at the top of `/kiosk/admin/manage.html`. **This migration
+has NOT been run on the live DB yet** — until it is, the display just falls back to fade (its
+always-safe default) and the admin setting won't persist.
+
+Public read / authenticated write, same RLS pattern as everything else. The display
+(`kiosk-display.js`) applies the setting as a `data-transition` attribute on the `.kiosk` root;
+`kiosk.css` scopes the slide/none CSS under `.kiosk[data-transition="..."]`, fade being the
+attribute-less default. `showCard()` now also tracks an `is-prev` class (the just-previous active
+card) alongside `is-active` — needed for slide's exit animation, harmless no-op for fade/none.
+
+**Real bug found and fixed while testing this, not a hypothetical:** `loadSettings()` and
+`loadCards()` used to fire concurrently with no ordering guarantee (`loadSettings(); loadCards();`
+— neither awaited). If the cards fetch won the race, `renderCard()` would build all the card
+elements *before* `data-transition` was set on `.kiosk`. Confirmed by direct testing: Chrome does
+not reliably re-resolve a percentage-based CSS transform (`translateX(100%)`, used by the slide
+style) on an element that already existed before the attribute that triggers it was set — works
+correctly when the attribute is present *before* the element is created, silently fails
+(computes as identity/no transform) when applied retroactively to an existing element. Fixed by
+combining both into one `refresh()` that always awaits settings before cards, on both the initial
+load and every periodic refresh. Verified with the real (non-mocked) `refresh()` function, not just
+a hand-rolled reproduction, by temporarily stubbing the settings query — all three styles
+(fade/slide/none) confirmed correct afterward.
+
+## Kiosk: confirmed working on the actual physical tablet (2026-09-06)
+
+User ran the kiosk display on the real Samsung Galaxy Tab E 8.0 (see specs below) at the same time
+as testing here — video autoplay and the CSS fade transition both worked with no issues. This
+resolves the "JS/CSS compatibility unverified" caveat in the section below — it's now a confirmed
+fact, not a guess. Logo overlay ("TEALUX CAFE / TAMPA" at the top) was removed since the user's
+photos/videos already carry the branding baked in — one less redundant element on a small screen.
+
+Also discussed and deliberately kept as-is: transition style between cards. Options considered
+were cross-fade (current), slide, and instant-cut; user picked cross-fade to stay conservative
+before knowing the tablet handled things fine. Now that the tablet's confirmed capable, revisit if
+they want to try slide instead — no code changes needed unless they ask.
+
 ## Kiosk: per-card title-visibility toggle + display duration (2026-09-06) — migration NOT run yet
 
 Added to the kiosk build below, after it was already live: `supabase/migration_010_kiosk_card_options.sql`
@@ -46,10 +87,8 @@ ancient Chromium build, `kiosk/css/kiosk.css` deliberately avoids CSS the WebVie
 support: no `inset` shorthand (needs Chrome 87+, replaced with explicit `top/right/bottom/left:0`),
 no flexbox `gap` (needs Chrome 84+, replaced with margins on `.kiosk-dot`). Font sizes/padding are
 also tuned specifically for the real 800px-wide portrait viewport via a `max-width: 900px` media
-query. **JS compatibility (arrow functions, template literals, async/await, etc.) has NOT been
-verified against the actual device** — these need Chrome ~55+ which the WebView likely clears, but
-this is unverified guesswork, not a tested fact. Test on the physical tablet once available; if
-things break, that's the first place to look.
+query. JS compatibility (arrow functions, template literals, async/await, etc.) and video autoplay
+have since been **confirmed working on the actual device** — see the dated entry above.
 
 - `tealuxcafetampa.com/kiosk/` — public, unauthenticated display. Full-bleed photo or autoplaying
   muted/looped video fills the whole screen (`object-fit: cover`, so it adapts to any aspect ratio
@@ -80,12 +119,12 @@ logo overlay, scrim, video autoplay, and pagination dots all worked. Also re-ver
 all fit cleanly with the tuned media-query sizing.
 
 **Not done yet:**
-- JS compatibility on the actual old WebView — untested, see above.
-- Tablet not physically set up as a kiosk yet (no kiosk-mode browser app installed/configured) —
-  device specs are known now, but the actual "mount it and point a kiosk browser at the URL" step
-  is still to come.
-- The two test cards (`Test Kiosk Image`, `Test Kiosk Video`) are still live on production —
-  delete or replace them via `/kiosk/admin/manage.html` before this is customer-facing for real.
+- The user has run the page in a regular browser on the tablet and confirmed it works (see above),
+  but it's not yet set up in an actual kiosk-mode browser app (e.g. Fully Kiosk Browser) for
+  full-screen/auto-launch/always-on behavior — that install/config step is still to come.
+- Original two test cards (`Test Kiosk Image`, `Test Kiosk Video`) have since been replaced — the
+  user added several real cards (boba drink promo graphics) via `/kiosk/admin/manage.html`
+  directly, using the optional-title feature (blank titles, since the graphics have text baked in).
 
 Also fixed in passing: `admin/css/admin.css` still had the pre-rebrand dull yellow
 (`#D4B700`/`#B89E00`) after the site-wide brand color fix below — updated to match, and fixed a

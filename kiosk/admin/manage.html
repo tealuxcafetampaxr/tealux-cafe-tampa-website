@@ -59,6 +59,18 @@
 
     <div class="form-error" id="form-error"></div>
 
+    <div class="panel" style="margin-bottom:24px; display:flex; align-items:flex-end; gap:16px; flex-wrap:wrap;">
+      <div class="field" style="margin-bottom:0; flex:1; min-width:200px;">
+        <label for="setting-transition">Transition Between Cards</label>
+        <select id="setting-transition">
+          <option value="fade">Fade</option>
+          <option value="slide">Slide</option>
+          <option value="none">Instant cut (no animation)</option>
+        </select>
+      </div>
+      <button type="button" class="btn btn-outline" id="btn-save-settings">Save Settings</button>
+    </div>
+
     <div id="loading" class="spinner-row"><span class="loading-spinner"></span></div>
     <div class="kiosk-list" id="kiosk-list" style="display:none;"></div>
     <div class="empty-state" id="empty-state" style="display:none;">
