@@ -1,0 +1,156 @@
+/* Tealux Cafe Tampa — counter kiosk display
+   Shares the main site's design tokens (see index.html :root).
+   Full-bleed media with a text overlay — designed for a landscape tablet,
+   but object-fit:cover + an absolutely-positioned overlay adapts to any
+   screen aspect ratio without separate layout branches. */
+
+:root {
+  --gold:  #FFE600;
+  --gold2: #DDC700;
+  --black: #111111;
+  --white: #FFFFFF;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+  font-family: 'Arial Black', 'Arial', sans-serif;
+  background: var(--black);
+  color: var(--white);
+}
+
+.kiosk {
+  position: relative;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+}
+
+.kiosk-logo {
+  position: absolute;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  text-align: center;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.6);
+}
+.kiosk-logo-main { font-size: 1.2rem; font-weight: 900; letter-spacing: -0.5px; }
+.kiosk-logo-sub { font-size: 0.5rem; letter-spacing: 5px; opacity: 0.75; margin-top: 2px; }
+
+.kiosk-stage {
+  position: absolute;
+  inset: 0;
+}
+
+.kiosk-card {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 0.8s ease;
+  pointer-events: none;
+}
+.kiosk-card.is-active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.kiosk-card-media {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  background-color: #1e1e1e;
+}
+.kiosk-card-media.no-media {
+  background: radial-gradient(ellipse at center, var(--gold) 0%, var(--gold2) 100%);
+}
+.kiosk-card-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.kiosk-badge {
+  position: absolute;
+  top: 24px;
+  left: 24px;
+  z-index: 5;
+  background: var(--gold);
+  color: var(--black);
+  font-size: 0.9rem;
+  font-weight: 900;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 10px 22px;
+  border-radius: 50px;
+}
+
+.kiosk-card-overlay {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 5;
+  padding: 64px 56px 44px;
+  background: linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.6) 55%, transparent 100%);
+}
+.kiosk-card-title {
+  font-size: 3rem;
+  font-weight: 900;
+  line-height: 1.05;
+  letter-spacing: -1px;
+  margin-bottom: 12px;
+  text-shadow: 0 2px 12px rgba(0,0,0,0.4);
+}
+.kiosk-card-subtitle {
+  font-family: 'Arial', sans-serif;
+  font-weight: 600;
+  font-size: 1.2rem;
+  line-height: 1.5;
+  opacity: 0.9;
+  max-width: 800px;
+}
+.kiosk-card-price {
+  margin-top: 14px;
+  font-size: 1.6rem;
+  font-weight: 900;
+  color: var(--gold);
+}
+
+.kiosk-dots {
+  position: absolute;
+  bottom: 18px;
+  left: 0;
+  right: 0;
+  z-index: 6;
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+.kiosk-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.35);
+  transition: background 0.2s;
+}
+.kiosk-dot.is-active { background: var(--gold); }
+
+.kiosk-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 48px;
+  opacity: 0.6;
+}
+.kiosk-empty .kiosk-card-title { font-size: 2rem; text-shadow: none; }
+.kiosk-empty .kiosk-card-subtitle { font-family: 'Arial', sans-serif; }

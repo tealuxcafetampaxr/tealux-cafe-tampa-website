@@ -2,12 +2,12 @@
    Shares the main site's design tokens (see index.html :root). */
 
 :root {
-  --crimson:  #D4B700;
-  --crimson2: #B89E00;
+  --crimson:  #FFE600;
+  --crimson2: #DDC700;
   --black:    #111111;
   --white:    #FFFFFF;
   --cream:    #F7F2EC;
-  --gold:     #D4B700;
+  --gold:     #FFE600;
   --border:   rgba(0,0,0,0.12);
   --danger:   #C0392B;
   --success:  #2E7D32;
@@ -112,7 +112,7 @@ a { color: inherit; }
 }
 .btn-dark { background: var(--black); color: var(--white); border-color: var(--black); }
 .btn-dark:hover { background: transparent; color: var(--black); }
-.btn-crimson { background: var(--crimson); color: var(--white); border-color: var(--crimson); }
+.btn-crimson { background: var(--crimson); color: var(--black); border-color: var(--crimson); }
 .btn-crimson:hover { background: transparent; color: var(--crimson2); }
 .btn-outline { background: transparent; color: var(--black); border-color: var(--black); }
 .btn-outline:hover { background: var(--black); color: var(--white); }

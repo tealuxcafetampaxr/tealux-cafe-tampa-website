@@ -14,6 +14,43 @@ redesign below has been click-tested live and confirmed good by the user (2026-0
 
 **No uncommitted local work right now.**
 
+## New: counter kiosk display (2026-09-06) — built, DB migration NOT yet run
+
+New `/kiosk` project, same repo/domain/Supabase project as the rest of the site (decided against a
+separate branch — Netlify only deploys `main`, so a branch alone doesn't share hosting; a new
+top-level folder deployed on `main` does).
+
+- `tealuxcafetampa.com/kiosk/` — public, unauthenticated display for a tablet mounted at the
+  counter. Rotates through active `kiosk_cards` (12s each, fades), refetches every 3 min so
+  content updates without touching the tablet. Falls back to a plain welcome message if the table
+  is empty/missing or the fetch fails — degrades gracefully.
+- `tealuxcafetampa.com/kiosk/admin/manage.html` — separate lightweight admin (not folded into
+  items.html/board.html, per the user's choice), reusing the *same* login/session
+  (`admin/js/supabase-client.js`) and the existing `item-images` storage bucket for media (path
+  prefix `kiosk/...`). Add/edit/delete cards, toggle active, reorder with up/down buttons (no
+  drag-and-drop — kept intentionally simple). Linked from the main admin nav ("Kiosk") on all 5
+  admin pages.
+- Content model: one `kiosk_cards` table, `type` is `'highlight'` (this week's featured item,
+  shown with a badge) or `'promo'` (rotating announcement) — both just rotate together in
+  `sort_order`, no separate layout logic for the two. Each card's media is either a photo or a
+  video (`media_url` + `media_type`) — the admin file picker accepts both and the display
+  auto-plays video muted/looped/full-bleed instead of a background-image.
+
+**Not done yet:**
+- `supabase/migration_009_kiosk.sql` has NOT been run on the live DB. The kiosk display will just
+  show the empty-state welcome message and the manage page will error on load until it's run
+  (Supabase SQL Editor, same as every other migration).
+- Not yet click-tested live with real data — once the migration's run, add a card via
+  `/kiosk/admin/manage.html` and confirm it shows up at `/kiosk/` (allow up to 3 min for the
+  display's poll, or just reload it).
+- No physical tablet set up yet — this was built for "a tablet mounted at the counter" per the
+  user, but the actual device/kiosk-mode browser setup is still to be done.
+
+Also fixed in passing: `admin/css/admin.css` still had the pre-rebrand dull yellow
+(`#D4B700`/`#B89E00`) after the site-wide brand color fix below — updated to match, and fixed a
+real (not just latent) white-text-on-yellow contrast bug in `.btn-crimson`, which is actively used
+for the "+ Add Item" button.
+
 ## Supabase free-tier auto-pause caused a login outage (2026-09-06)
 
 User reported "loading error" on login. Root cause: the Supabase project (free tier) had
